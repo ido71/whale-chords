@@ -24,7 +24,9 @@ h1{font:700 22px/1.1 Rubik,Heebo,sans-serif;margin:0;flex:1}
 .fig>svg.go{cursor:pointer}
 .spout.rise{animation:rise .6s ease-out}@keyframes rise{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
 .wrap{max-width:880px;margin:auto;padding:0 max(4vw,14px) 40px}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 6px}
+.modes{list-style:none;margin:0;padding:0 0 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--rule)}
+.modes b{color:var(--ink);font-weight:600;margin-inline-end:6px}.modes li.on b{color:var(--whale)}
 button,select,input,textarea{font:inherit;color:inherit}
 button{min-height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--rule);background:var(--panel);cursor:pointer}
 button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
@@ -60,7 +62,7 @@ input[type=text]{min-height:44px;border-radius:12px;border:1.5px solid var(--rul
 .pick[hidden]{display:none}
 details{margin-top:8px}summary{cursor:pointer;min-height:32px}
 @media (prefers-reduced-motion:reduce){.meter i{transition:none}.spout.rise{animation:none}}
-@media(max-width:600px){.fig{aspect-ratio:450/294}h1{font-size:19px}.chip{min-height:38px;padding:0 11px}}
+@media(max-width:600px){.modes{grid-template-columns:1fr}.fig{aspect-ratio:450/294}h1{font-size:19px}.chip{min-height:38px;padding:0 11px}}
 </style>
 </head>
 <body>
@@ -81,6 +83,12 @@ details{margin-top:8px}summary{cursor:pointer;min-height:32px}
   <button id="t-free" aria-pressed="false">זיהוי חופשי</button>
   <button id="t-tune" aria-pressed="false">טיונר</button>
  </div>
+ <ul class="modes">
+  <li data-m="prac"><b>תרגול</b> בוחרים אקורד, פורטים, ומקבלים ✓ או ✗ עם רמז</li>
+  <li data-m="song"><b>שיר</b> מנגנים שיר מההתחלה, אקורד אחרי אקורד</li>
+  <li data-m="free"><b>זיהוי חופשי</b> מנגנים מה שרוצים, והלוויתן אומר איזה אקורד שמע</li>
+  <li data-m="tune"><b>טיונר</b> מכוונים את המיתרים, אחד בכל פעם</li>
+ </ul>
 
  <section id="help" class="help" hidden>
   <h2 id="helpH"></h2>
@@ -607,7 +615,8 @@ function screen() {
  <path d="M44 214 C70 226 92 226 108 218" stroke="#173f5c" stroke-width="3" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>
  <circle cx="283" cy="58" r="6" fill="#173f5c"/>
  ${spout ? `<g class="spout${spoutNew ? ' rise' : ''}"><path d="M277 50 Q280 44 283 40 Q286 44 289 50" stroke="#9ccbe8" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>
-  <text x="283" y="32" font-size="24" font-weight="700" fill="#eaf6fd" font-family="Rubik" text-anchor="middle">${esc(spout)}</text></g>` : ''}
+  <g fill="#eaf6fd" stroke="#eaf6fd"><ellipse cx="282" cy="30" rx="6.5" ry="4.8" transform="rotate(-22 282 30)" stroke="none"/><path d="M288 29 V8 Q296 12 298 20" stroke-width="2.4" fill="none" stroke-linecap="round"/></g>
+  <g fill="#b9dcf0" stroke="#b9dcf0" opacity=".85"><ellipse cx="303" cy="22" rx="4.6" ry="3.4" transform="rotate(-22 303 22)" stroke="none"/><path d="M307.3 21 V6" stroke-width="1.8" fill="none" stroke-linecap="round"/></g></g>` : ''}
  <circle cx="135" cy="182" r="9" fill="#0d2536"/><circle cx="138" cy="179" r="3" fill="#fff"/>
  <clipPath id="scr"><rect x="185" y="103" width="398" height="144" rx="45"/></clipPath>
  <rect x="178" y="96" width="412" height="158" rx="52" fill="#0b1f2d"/><rect x="185" y="103" width="398" height="144" rx="45" fill="#0f2a3d"/>
@@ -619,6 +628,7 @@ function screen() {
 // ------------------------------------------------------------ panels
 function render() {
   for (const m of ['prac', 'song', 'free', 'tune']) { $('t-' + m).setAttribute('aria-pressed', S.mode === m); $('p-' + m).hidden = S.mode !== m; }
+  for (const li of document.querySelectorAll('.modes li')) li.classList.toggle('on', li.dataset.m === S.mode);
   $('clip').hidden = !T.clipMode;
   if (S.mode === 'prac') {
     const cur = S.pracSel[((S.pracI % S.pracSel.length) + S.pracSel.length) % S.pracSel.length];
