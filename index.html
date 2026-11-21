@@ -53,6 +53,8 @@ input[type=text]{min-height:44px;border-radius:12px;border:1.5px solid var(--rul
 .log{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:4px;font-size:15px}
 .log li{padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--rule)}
 .log .y{border-color:color-mix(in srgb,var(--good) 50%,var(--rule))}.log .n{border-color:color-mix(in srgb,var(--bad) 50%,var(--rule))}
+.help{background:color-mix(in srgb,var(--coral) 9%,var(--panel));border:1.5px solid color-mix(in srgb,var(--coral) 45%,var(--rule));border-radius:14px;padding:14px 16px;margin-top:12px}
+.help ol{margin:0;padding-inline-start:22px;display:grid;gap:6px}.help a{color:inherit;font-weight:600}
 .pick{position:fixed;inset:auto 0 0 0;background:var(--panel);border-top:2px solid var(--whale);padding:14px max(4vw,14px) 20px;box-shadow:0 -8px 30px #0004;z-index:5}
 .pick[hidden]{display:none}
 details{margin-top:8px}summary{cursor:pointer;min-height:32px}
@@ -79,9 +81,15 @@ details{margin-top:8px}summary{cursor:pointer;min-height:32px}
   <button id="t-tune" aria-pressed="false">טיונר</button>
  </div>
 
+ <section id="help" class="help" hidden>
+  <h2 id="helpH"></h2>
+  <ol id="helpSteps"></ol>
+  <div class="ctl"><button id="retry" class="mic">נסו שוב</button><span class="note" id="helpNote"></span></div>
+ </section>
+
  <section id="clip" hidden>
-  <h2>בדיקה מהקלטה</h2>
-  <p class="note" id="clipWhy">בתוך claude.ai אין גישה למיקרופון. הקליטו כמה פריטות (בטלפון זה פותח את מקליט הקול) או בחרו קובץ, והלוויתן יבדוק כל פריטה שבו.</p>
+  <h2>או: בדיקה מהקלטה</h2>
+  <p class="note">בלי האזנה חיה: הקליטו כמה פריטות, אחת בכל פעם עם הפסקה קצרה ביניהן, או בחרו קובץ שמע. הלוויתן יבדוק כל פריטה בקטע מול האקורד שעל המסך. בטלפון הכפתור פותח את מקליט הקול.</p>
   <div class="ctl"><label><input type="file" id="file" accept="audio/*" capture> </label></div>
   <ul class="log" id="clipLog"></ul>
  </section>
@@ -755,13 +763,53 @@ async function start() {
 }
 function stop() { try { proc && proc.disconnect(); stream && stream.getTracks().forEach(t => t.stop()); ctx && ctx.close(); } catch (e) {}
   T.listening = false; $('mic').textContent = '🎤 התחל להאזין'; $('mic').classList.remove('on'); $('lvl').style.width = '0'; status(''); render(); }
+const LIVE_URL = 'https://ido71.github.io/whale-chords/';
+const UA = navigator.userAgent, IOS = /iPhone|iPad|iPod/.test(UA) || (/Mac/.test(UA) && navigator.maxTouchPoints > 1), ANDROID = /Android/.test(UA);
+function help(kind) {
+  const H = {
+    frame: ['כאן אין האזנה חיה — פתחו את הלוויתן בכתובת שלו',
+      [`פתחו את <a href="${LIVE_URL}" target="_blank" rel="noopener">${LIVE_URL.replace('https://', '')}</a> (במחשב או בטלפון).`,
+       'הקישו על מסך הלוויתן ואשרו את המיקרופון כשהדפדפן שואל.',
+       'claude.ai לא מאפשר מיקרופון בדפים שנפתחים בתוכו, ולכן כאן אפשר רק לבדוק הקלטה (למטה).'], false],
+    denied: ['הדפדפן חסם את המיקרופון — כך מאשרים',
+      IOS ? ['בספארי: הקישו על <b>aA</b> משמאל לכתובת ← <b>הגדרות אתר</b> ← <b>מיקרופון</b> ← <b>אפשר</b>.',
+             'אם אין שם אפשרות: <b>הגדרות</b> של האייפון ← <b>Safari</b> ← <b>מיקרופון</b> ← <b>אפשר</b>.',
+             'חזרו לכאן ולחצו «נסו שוב».']
+      : ANDROID ? ['בכרום: הקישו על סמל ההגדרות משמאל לכתובת ← <b>הרשאות</b> ← <b>מיקרופון</b> ← <b>אפשר</b>.',
+             'אם עדיין חסום: <b>הגדרות</b> של הטלפון ← <b>אפליקציות</b> ← <b>Chrome</b> ← <b>הרשאות</b> ← <b>מיקרופון</b> ← <b>אפשר</b>.',
+             'חזרו לכאן ולחצו «נסו שוב».']
+      : ['לחצו על סמל המנעול או ההגדרות <b>משמאל לכתובת</b> בשורת הכתובת.',
+         'ליד <b>מיקרופון</b> בחרו <b>אפשר</b> (Allow), ואז רעננו את הדף.',
+         'עדיין חסום? ב-Windows: <b>הגדרות</b> ← <b>פרטיות ואבטחה</b> ← <b>מיקרופון</b>, והפעילו גישה למיקרופון וגם לאפליקציות שולחן העבודה. ב-Mac: <b>הגדרות המערכת</b> ← <b>פרטיות ואבטחה</b> ← <b>מיקרופון</b> ← סמנו את הדפדפן.',
+         'חזרו לכאן ולחצו «נסו שוב».'], true],
+    nomic: ['לא נמצא מיקרופון',
+      ['במחשב נייח בלי מיקרופון: חברו אוזניות עם מיקרופון או מיקרופון USB.',
+       'אם יש מיקרופון: ודאו שהוא לא מושתק ושהוא נבחר כמיקרופון ברירת המחדל בהגדרות הצליל.',
+       'הכי פשוט: פתחו את הכתובת בטלפון — למיקרופון שלו יש גישה טובה לגיטרה.'], true],
+    busy: ['המיקרופון תפוס בתוכנה אחרת',
+      ['סגרו תוכנות שמשתמשות במיקרופון (Zoom, Teams, WhatsApp, הקלטה) או לשוניות אחרות שמקליטות.',
+       'ולחצו «נסו שוב».'], true],
+    other: ['הדפדפן הזה לא מאפשר האזנה',
+      [`פתחו את <a href="${LIVE_URL}" target="_blank" rel="noopener">${LIVE_URL.replace('https://', '')}</a> בכרום, אדג׳ או ספארי מעודכנים.`,
+       'דפדפנים פנימיים של אפליקציות (למשל כשפותחים קישור מתוך וואטסאפ או פייסבוק) חוסמים לפעמים מיקרופון — בחרו «פתח בדפדפן».'], false],
+  }[kind];
+  $('helpH').textContent = H[0]; $('helpSteps').innerHTML = H[1].map(x => `<li>${x}</li>`).join('');
+  $('retry').hidden = !H[2]; $('helpNote').textContent = 'אפשר גם בלי האזנה חיה — בדיקה מהקלטה למטה.';
+  $('help').hidden = false; T.clipMode = true; render();
+  $('help').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 $('mic').onclick = async () => {
   if (T.listening) return stop();
-  try { await start(); }
-  catch (e) { T.clipMode = true; render();
-    status(e && e.name === 'NotAllowedError' && window.top === window ? 'הגישה למיקרופון נחסמה. אשרו אותה בהגדרות הדפדפן, או הקליטו קטע למטה.' : 'אין כאן גישה חיה למיקרופון — הקליטו קטע למטה, או פתחו את הדף כקובץ בדפדפן.');
-    $('clip').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  $('help').hidden = true;
+  try { await start(); T.clipMode = false; render(); }
+  catch (e) {
+    const n = e && e.name;
+    help(window.top !== window ? 'frame' : n === 'NotAllowedError' || n === 'SecurityError' ? 'denied'
+      : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'nomic' : n === 'NotReadableError' || n === 'AbortError' ? 'busy' : 'other');
+    status('');
+  }
 };
+$('retry').onclick = () => $('mic').click();
 svg.onclick = () => { if (!T.listening && !T.clipMode) $('mic').click(); };
 svg.setAttribute('tabindex', '0'); svg.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && !T.listening && !T.clipMode) { e.preventDefault(); $('mic').click(); } };
 $('gain').oninput = e => { S.gain = +e.target.value; $('gainV').textContent = '×' + S.gain; save(); };
@@ -797,6 +845,7 @@ $('file').onchange = async e => {
 
 T.clipMode = window.top !== window;   // inside claude.ai the frame blocks the microphone
 render();
+if (T.clipMode) help('frame');
 }
 </script>
 </body>
