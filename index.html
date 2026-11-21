@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>לוויתן אקורדים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a friendly practice instrument, calm and exact
+   IDEA: the device itself — the whale is the app, its belly screen is the main view
+   PICTURE: the whale with its live 240×240 screen, large, at the top
+   COLOUR and TYPE: deep sea blue ground, whale blue, coral accent; Rubik for chord names, Heebo for Hebrew
+   LAYOUT: whale on top, mode tabs and the controls of the current mode under it in one column */
+:root{color-scheme:light dark;--bg:light-dark(#f3f8fb,#08141c);--ink:light-dark(#0f1c26,#e6eef3);--muted:light-dark(#4f6372,#93a8b6);--rule:light-dark(#d5e1e9,#1e2f3b);--panel:light-dark(#ffffff,#10202b);--sea:#0b3a5b;--sea2:#0f4c75;--whale:#3a86b8;--coral:#ff6b4a;--good:#1f9a60;--bad:#e0443a}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Heebo,Arial,sans-serif;overflow-x:clip}
+.top{background:linear-gradient(180deg,var(--sea),var(--sea2));color:#eaf4fa;padding:14px max(4vw,14px) 6px}
+.top .row{max-width:880px;margin:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font:700 22px/1.1 Rubik,Heebo,sans-serif;margin:0;flex:1}
+.fig{position:relative;max-width:880px;margin:auto;aspect-ratio:600/330}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;direction:ltr}
+.wrap{max-width:880px;margin:auto;padding:0 max(4vw,14px) 40px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{min-height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--rule);background:var(--panel);cursor:pointer}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.tabs button[aria-pressed=true]{background:var(--whale);border-color:var(--whale);color:#fff;font-weight:500}
+.mic{background:var(--coral);border-color:var(--coral);color:#fff;font-weight:700}
+.mic.on{background:#fff;color:var(--sea);border-color:#fff}
+.top button{border-color:#ffffff55;background:#ffffff14;color:#fff}
+.meter{width:90px;height:8px;border-radius:4px;background:#ffffff22;overflow:hidden}.meter i{display:block;height:100%;width:0;background:#7fe0a8;transition:width .08s}
+.status{max-width:880px;margin:4px auto 0;font-size:14px;color:#cfe2ee;min-height:22px}
+section{padding:14px 0;border-bottom:1px solid var(--rule)}
+section[hidden]{display:none}
+h2{font:600 18px/1.2 Heebo,sans-serif;margin:4px 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:40px;padding:0 13px;border-radius:20px;font:600 15px Rubik,Heebo,sans-serif;direction:ltr}
+.chip.sel{border-color:var(--whale);background:color-mix(in srgb,var(--whale) 16%,var(--panel))}
+.chip.on{background:var(--coral);border-color:var(--coral);color:#fff}
+.chip.ed{border-style:dashed}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.ctl .v{min-width:92px;text-align:center;font-weight:600}
+.note{font-size:14px;color:var(--muted)}
+.lib{display:grid;gap:6px}
+.lib button{display:flex;justify-content:space-between;text-align:start;border-radius:12px;padding:8px 14px}
+.lib button.on{border-color:var(--whale);background:color-mix(in srgb,var(--whale) 12%,var(--panel))}
+textarea{width:100%;min-height:150px;border-radius:12px;border:1.5px solid var(--rule);background:var(--panel);padding:10px;font-size:16px;direction:ltr;text-align:left}
+input[type=text]{min-height:44px;border-radius:12px;border:1.5px solid var(--rule);background:var(--panel);padding:0 12px;font-size:16px}
+.sec{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}.sec b{min-width:56px;font-size:14px;color:var(--muted)}
+.log{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:4px;font-size:15px}
+.log li{padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--rule)}
+.log .y{border-color:color-mix(in srgb,var(--good) 50%,var(--rule))}.log .n{border-color:color-mix(in srgb,var(--bad) 50%,var(--rule))}
+.pick{position:fixed;inset:auto 0 0 0;background:var(--panel);border-top:2px solid var(--whale);padding:14px max(4vw,14px) 20px;box-shadow:0 -8px 30px #0004;z-index:5}
+.pick[hidden]{display:none}
+details{margin-top:8px}summary{cursor:pointer;min-height:32px}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+@media(max-width:600px){h1{font-size:19px}.chip{min-height:38px;padding:0 11px}}
+</style>
+</head>
+<body>
+<div class="top">
+ <div class="row">
+  <h1>לוויתן אקורדים</h1>
+  <div class="meter" aria-hidden="true"><i id="lvl"></i></div>
+  <button id="mic" class="mic">🎤 התחל להאזין</button>
+ </div>
+ <div class="fig"><svg id="whale" viewBox="0 0 600 330" role="img" aria-label="מסך הלוויתן"></svg></div>
+ <div class="status" id="status" role="status"></div>
+</div>
+
+<div class="wrap">
+ <div class="tabs" role="group" aria-label="מצב">
+  <button id="t-prac" aria-pressed="true">תרגול</button>
+  <button id="t-song" aria-pressed="false">שיר</button>
+  <button id="t-free" aria-pressed="false">זיהוי חופשי</button>
+  <button id="t-tune" aria-pressed="false">טיונר</button>
+ </div>
+
+ <section id="clip" hidden>
+  <h2>בדיקה מהקלטה</h2>
+  <p class="note" id="clipWhy">בתוך claude.ai אין גישה למיקרופון. הקליטו כמה פריטות (בטלפון זה פותח את מקליט הקול) או בחרו קובץ, והלוויתן יבדוק כל פריטה שבו.</p>
+  <div class="ctl"><label><input type="file" id="file" accept="audio/*" capture> </label></div>
+  <ul class="log" id="clipLog"></ul>
+ </section>
+
+ <section id="p-prac">
+  <h2>בחרו אקורדים לתרגול</h2>
+  <div class="chips" id="pracChips"></div>
+  <div class="ctl">
+   <button id="pracPrev">→ הקודם</button><button id="pracNext">הבא ←</button>
+   <label class="note"><input type="checkbox" id="pracShuffle"> סדר אקראי</label>
+  </div>
+  <p class="note">שלוש פריטות נכונות ברצף מעבירות לאקורד הבא. פרטו פעם אחת, חכו לתשובה, ואז שוב.</p>
+ </section>
+
+ <section id="p-song" hidden>
+  <h2>השיר</h2>
+  <div id="songChords"></div>
+  <div class="ctl">
+   <button id="sPrev">→</button><button id="sNext">←</button>
+   <span class="note">טרנספוזיציה</span><button id="trDn">−</button><span class="v" id="trV"></span><button id="trUp">+</button>
+   <span class="note">קפו</span><button id="cpDn">−</button><span class="v" id="cpV"></span><button id="cpUp">+</button>
+   <button id="cpSug">הצע קפו</button>
+  </div>
+  <div class="ctl">
+   <label class="note"><input type="checkbox" id="follow" checked> מעבר לאקורד הבא אחרי פריטה נכונה</label>
+   <button id="fav">☆ מועדף</button><button id="undo">בטל שינוי</button><button id="del">מחק שיר</button>
+  </div>
+  <p class="note">לחיצה על אקורד בשיר פותחת החלפה: באקורד הזה בלבד או בכל השיר.</p>
+  <h2>הספרייה</h2>
+  <div class="lib" id="lib"></div>
+  <details>
+   <summary>ייבוא שיר מ-Tab4U או Ultimate Guitar</summary>
+   <p class="note">העתיקו את דף האקורדים (עם או בלי מילים) והדביקו כאן. נשמרים רק האקורדים, שמות החלקים והקפו — בלי המילים.</p>
+   <div class="ctl"><input type="text" id="impTitle" placeholder="שם השיר"></div>
+   <textarea id="impText" placeholder="[Verse]&#10;G        D&#10;...&#10;Em       C&#10;..."></textarea>
+   <div class="ctl"><button id="impGo">ייבא</button><span class="note" id="impMsg"></span></div>
+  </details>
+ </section>
+
+ <section id="p-free" hidden>
+  <h2>זיהוי חופשי</h2>
+  <p class="note">נגנו כל אקורד, והלוויתן יאמר מה הוא שומע ומה האפשרויות הקרובות.</p>
+  <ul class="log" id="freeLog"></ul>
+ </section>
+
+ <section id="p-tune" hidden>
+  <h2>טיונר</h2>
+  <p class="note">פרטו מיתר אחד בכל פעם. המחוג במרכז והמסך ירוק: המיתר מכוון. 6 = E נמוך, 1 = E גבוה.</p>
+  <div class="ctl"><span class="note">כיוון רגיל:</span> <span class="chips"><span class="chip">E2</span><span class="chip">A2</span><span class="chip">D3</span><span class="chip">G3</span><span class="chip">B3</span><span class="chip">E4</span></span></div>
+ </section>
+
+ <section>
+  <details>
+   <summary>הגדרות וקצת עליו</summary>
+   <div class="ctl"><label class="note" for="gain">רגישות המיקרופון</label><input type="range" id="gain" min="0.5" max="6" step="0.5" value="1"><span class="v" id="gainV">×1</span></div>
+   <p class="note">זה המנוע של הלוויתן, אותו קוד שנבדק על הקלטות גיטרה אמיתיות (GuitarSet): בפיקאפ, כ-90% מהאקורדים הנכונים מתקבלים וכ-89% מהטרצות החסרות נתפסות. מיקרופון רחוק מהגיטרה ורעש בחדר מורידים דיוק — קרוב לגוף הגיטרה עובד הכי טוב. כל העיבוד קורה במכשיר שלכם; שום צליל לא נשלח לשום מקום.</p>
+  </details>
+ </section>
+</div>
+
+<div class="pick" id="pick" hidden>
+ <h2 id="pickH">החלפת אקורד</h2>
+ <div class="chips" id="pickChips"></div>
+ <div class="ctl"><label class="note"><input type="checkbox" id="pickAll"> החלף בכל השיר</label><button id="pickX">סגור</button></div>
+</div>
+
+<script>
+// Chord Whale engine, JavaScript port of whale_engine (Python).
+// Same numbers, same decisions: params, chroma, templates, verify (incl. exact-note
+// check), spectral-flux onsets and YIN tuner. Runs in the browser and in Node.
+const WhaleEngine = (() => {
+  const P = {
+    sr: 16000, nfft_fast: 2048, nfft_full: 4096, onset_delay: 0.02, fmin: 70, fmax: 1400,
+    peak_rel: 0.15, floor_mult: 1.5, bass_rel: 0.30, harmonics: 4, harm_decay: 0.6, bass_bonus: 0.03,
+    verify_margin: 0.05, type_prior: { '5': -0.08 }, extra_harmonics: 10, extra_decay: 0.6,
+    leak_alpha: 1.0, leak_harmonics: 5, leak_decay: 0.6,
+    note_min_rel: 0.08, note_harmonics: 4, note_overtones: 8, note_cents: 35, note_fmax: 4000,
+    missing_rel: 0.10, extra_ratio: 2.5, extra_add: 0.25, fast_confidence: 0.06,
+    onset_ratio: 1.8, onset_min_flux: 1.0, onset_log_gain: 1.0, onset_fmax: 2000, onset_min_rise: 0.005,
+    onset_history: 0.3, onset_min_gap: 0.2, tuner_threshold: 0.12, tuner_fmin: 60, tuner_fmax: 1000,
+  };
+
+  // ------------------------------------------------------------ theory
+  const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const DISPLAY = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const PC = {}; SHARPS.forEach((n, i) => PC[n] = i);
+  Object.assign(PC, { Db: 1, Eb: 3, Gb: 6, Ab: 8, Bb: 10, Cb: 11, Fb: 4, 'E#': 5, 'B#': 0 });
+  const OPEN_STRINGS = [40, 45, 50, 55, 59, 64];
+  const TYPES = {
+    '': [0, 4, 7], 'm': [0, 3, 7], '7': [0, 4, 7, 10], 'maj7': [0, 4, 7, 11], 'm7': [0, 3, 7, 10],
+    'sus2': [0, 2, 7], 'sus4': [0, 5, 7], 'dim': [0, 3, 6], 'aug': [0, 4, 8], '5': [0, 7],
+  };
+  const TYPE_KEYS = Object.keys(TYPES);
+  const ALIASES = {
+    '': '', 'maj': '', 'M': '', 'major': '', 'm': 'm', 'min': 'm', '-': 'm', 'minor': 'm',
+    '7': '7', 'dom7': '7', 'maj7': 'maj7', 'M7': 'maj7', 'Maj7': 'maj7', 'ma7': 'maj7', 'Δ': 'maj7', 'Δ7': 'maj7',
+    'm7': 'm7', 'min7': 'm7', '-7': 'm7', 'mi7': 'm7', 'sus2': 'sus2', '2': 'sus2', 'sus4': 'sus4', 'sus': 'sus4',
+    '4': 'sus4', 'dim': 'dim', 'o': 'dim', '°': 'dim', 'aug': 'aug', '+': 'aug', '5': '5',
+    '6': '', 'add9': '', 'add2': '', '9': '7', 'm6': 'm', 'm9': 'm7', 'maj9': 'maj7', '7sus4': 'sus4',
+    'dim7': 'dim', 'm7b5': 'dim',
+  };
+  const CHORD_RE = /^([A-G])([#b]?)([^/\s]*)(?:\/([A-G][#b]?))?$/;
+  const mod = (a, n = 12) => ((a % n) + n) % n;
+
+  class Chord {
+    constructor(root, type, bass = null) { this.root = mod(root); this.type = type; this.bass = bass == null ? null : mod(bass); if (this.bass === this.root) this.bass = null; }
+    get tones() { const t = new Set(TYPES[this.type].map(i => mod(this.root + i))); if (this.bass != null) t.add(this.bass); return t; }
+    get name() { let s = DISPLAY[this.root] + this.type; if (this.bass != null) s += '/' + DISPLAY[this.bass]; return s; }
+    transposed(n) { return new Chord(this.root + n, this.type, this.bass == null ? null : this.bass + n); }
+  }
+  const isChord = tok => { const m = CHORD_RE.exec(tok.trim()); return !!m && (m[3] in ALIASES); };
+  function parse(tok) {
+    if (tok instanceof Chord) return tok;
+    const m = CHORD_RE.exec(String(tok).trim());
+    if (!m || !(m[3] in ALIASES)) throw new Error('not a chord: ' + tok);
+    return new Chord(PC[m[1] + m[2]], ALIASES[m[3]], m[4] ? PC[m[4]] : null);
+  }
+
+  const OPEN_SHAPES = {
+    '0,': [-1, 3, 2, 0, 1, 0], '0,7': [-1, 3, 2, 3, 1, 0], '0,maj7': [-1, 3, 2, 0, 0, 0],
+    '2,': [-1, -1, 0, 2, 3, 2], '2,m': [-1, -1, 0, 2, 3, 1], '2,7': [-1, -1, 0, 2, 1, 2],
+    '2,sus4': [-1, -1, 0, 2, 3, 3], '2,sus2': [-1, -1, 0, 2, 3, 0], '2,m7': [-1, -1, 0, 2, 1, 1],
+    '2,maj7': [-1, -1, 0, 2, 2, 2],
+    '4,': [0, 2, 2, 1, 0, 0], '4,m': [0, 2, 2, 0, 0, 0], '4,7': [0, 2, 0, 1, 0, 0],
+    '4,m7': [0, 2, 0, 0, 0, 0], '4,sus4': [0, 2, 2, 2, 0, 0], '4,5': [0, 2, 2, -1, -1, -1],
+    '5,maj7': [-1, -1, 3, 2, 1, 0],
+    '7,': [3, 2, 0, 0, 0, 3], '7,7': [3, 2, 0, 0, 0, 1],
+    '9,': [-1, 0, 2, 2, 2, 0], '9,m': [-1, 0, 2, 2, 1, 0], '9,7': [-1, 0, 2, 0, 2, 0],
+    '9,m7': [-1, 0, 2, 0, 1, 0], '9,maj7': [-1, 0, 2, 1, 2, 0], '9,sus4': [-1, 0, 2, 2, 3, 0],
+    '9,sus2': [-1, 0, 2, 2, 0, 0], '9,5': [-1, 0, 2, 2, -1, -1],
+    '11,7': [-1, 2, 1, 2, 0, 2],
+  };
+  const E_FORM = { '': [0, 2, 2, 1, 0, 0], 'm': [0, 2, 2, 0, 0, 0], '7': [0, 2, 0, 1, 0, 0], 'm7': [0, 2, 0, 0, 0, 0], 'maj7': [0, -1, 1, 1, 0, -1], 'sus4': [0, 2, 2, 2, 0, 0], '5': [0, 2, 2, -1, -1, -1] };
+  const A_FORM = { '': [-1, 0, 2, 2, 2, 0], 'm': [-1, 0, 2, 2, 1, 0], '7': [-1, 0, 2, 0, 2, 0], 'm7': [-1, 0, 2, 0, 1, 0], 'maj7': [-1, 0, 2, 1, 2, 0], 'sus4': [-1, 0, 2, 2, 3, 0], 'sus2': [-1, 0, 2, 2, 0, 0], 'dim': [-1, 0, 1, 2, 1, -1], '5': [-1, 0, 2, 2, -1, -1] };
+  const SMALL = { 'dim': [-1, 0, 1, 2, 1, -1], 'aug': [-1, 0, 3, 2, 2, 1] };
+
+  function fingering(chIn) {
+    const ch = parse(chIn);
+    if (ch.bass != null) { const sl = slashShape(ch); if (sl) return sl; }
+    const key = ch.root + ',' + ch.type;
+    if (OPEN_SHAPES[key]) return OPEN_SHAPES[key].slice();
+    const fe = mod(ch.root - 4), fa = mod(ch.root - 9);
+    const c = [];
+    if (E_FORM[ch.type]) c.push([fe || 12, E_FORM[ch.type]]);
+    if (A_FORM[ch.type]) c.push([fa || 12, A_FORM[ch.type]]);
+    if (SMALL[ch.type]) c.push([fa || 12, SMALL[ch.type]]);
+    let best = c[0]; for (const x of c) if (x[0] < best[0]) best = x;
+    return best[1].map(b => b < 0 ? -1 : b + best[0]);
+  }
+  function slashShape(ch) {
+    const shape = fingering(new Chord(ch.root, ch.type));
+    for (const s of [0, 1]) for (let f = 0; f < 5; f++) {
+      if (mod(OPEN_STRINGS[s] + f) === ch.bass) {
+        const n = shape.slice(); n[s] = f; if (s === 1) n[0] = -1;
+        const fr = n.filter(x => x > 0);
+        if (!fr.length || Math.max(...fr) - Math.min(...fr) <= 3) return n;
+      }
+    }
+    return null;
+  }
+  const shapeTones = sh => new Set(sh.map((f, s) => f >= 0 ? mod(OPEN_STRINGS[s] + f) : null).filter(x => x != null));
+  const shapeNotes = sh => sh.map((f, s) => f >= 0 ? [s, OPEN_STRINGS[s] + f] : null).filter(Boolean);
+
+  // ------------------------------------------------------------ FFT (radix-2, in place)
+  const fftCache = {};
+  function fftTables(n) {
+    if (fftCache[n]) return fftCache[n];
+    const rev = new Uint32Array(n); const bits = Math.log2(n);
+    for (let i = 0; i < n; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); rev[i] = r; }
+    const cos = new Float64Array(n / 2), sin = new Float64Array(n / 2);
+    for (let i = 0; i < n / 2; i++) { cos[i] = Math.cos(2 * Math.PI * i / n); sin[i] = -Math.sin(2 * Math.PI * i / n); }
+    const hann = new Float64Array(n); for (let i = 0; i < n; i++) hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (n - 1));
+    return (fftCache[n] = { rev, cos, sin, hann });
+  }
+  // |rfft(x * hann)|, length n/2+1
+  function magSpectrum(x, n) {
+    const { rev, cos, sin, hann } = fftTables(n);
+    const re = new Float64Array(n), im = new Float64Array(n);
+    for (let i = 0; i < n; i++) re[rev[i]] = (x[i] || 0) * hann[i];
+    for (let size = 2; size <= n; size <<= 1) {
+      const half = size >> 1, step = n / size;
+      for (let i = 0; i < n; i += size) for (let j = 0; j < half; j++) {
+        const k = j * step, a = i + j, b = a + half;
+        const tr = re[b] * cos[k] - im[b] * sin[k], ti = re[b] * sin[k] + im[b] * cos[k];
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+      }
+    }
+    const out = new Float64Array(n / 2 + 1);
+    for (let i = 0; i <= n / 2; i++) out[i] = Math.hypot(re[i], im[i]);
+    return out;
+  }
+  const median = arr => { if (!arr.length) return 0; const s = Array.from(arr).sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+  // ------------------------------------------------------------ features
+  const tabCache = {};
+  function tables(n) {
+    if (tabCache[n]) return tabCache[n];
+    const band = [], pcs = [], freqs = [];
+    for (let i = 0; i <= n / 2; i++) { const f = i * P.sr / n; if (f > P.fmin && f < P.fmax) { band.push(i); freqs.push(f); pcs.push(mod(Math.round(12 * Math.log2(f / 440) + 69))); } }
+    return (tabCache[n] = { band, pcs, freqs });
+  }
+  function analyse(frame, n) {
+    const { band, pcs, freqs } = tables(n);
+    const spec = magSpectrum(frame, n);
+    let ss = 0; for (let i = 0; i < n; i++) ss += (frame[i] || 0) ** 2;
+    const level = Math.sqrt(ss / n);
+    const mag = band.map(i => Math.sqrt(spec[i]));
+    const mx = Math.max(...mag);
+    if (!(mx > 0)) return { chroma: new Float64Array(12), bass: -1, level, peaks: [], spectrum: spec };
+    const floor = median(mag);
+    const thr = Math.max(P.peak_rel * mx, P.floor_mult * floor);
+    const c = new Float64Array(12); const keep = [];
+    for (let i = 1; i < mag.length - 1; i++) if (mag[i] > mag[i - 1] && mag[i] > mag[i + 1] && mag[i] > thr) { keep.push(i); c[pcs[i]] += mag[i] - floor; }
+    let nn = 0; for (const v of c) nn += v * v; nn = Math.sqrt(nn); if (nn > 0) for (let i = 0; i < 12; i++) c[i] /= nn;
+    const strong = keep.filter(i => mag[i] > P.bass_rel * mx);
+    return { chroma: c, bass: strong.length ? pcs[strong[0]] : -1, level, peaks: keep.map(i => [freqs[i], mag[i]]), spectrum: spec };
+  }
+
+  // ------------------------------------------------------------ templates
+  const HSHIFT = h => Math.round(12 * Math.log2(h));
+  function profile(pcset, harmonics = 4, decay = 0.6) {
+    const v = new Float64Array(12);
+    for (const n of pcset) for (let h = 1; h <= harmonics; h++) v[mod(n + HSHIFT(h))] += decay ** (h - 1);
+    let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s); for (let i = 0; i < 12; i++) v[i] /= s;
+    return v;
+  }
+  const BANK = (() => {
+    const names = [], roots = [], mats = [], tonesets = [], prior = [];
+    for (let r = 0; r < 12; r++) for (const t of TYPE_KEYS) {
+      names.push([r, t]); roots.push(r);
+      const ts = new Set(TYPES[t].map(i => mod(r + i))); tonesets.push(ts);
+      mats.push(profile(ts, P.harmonics, P.harm_decay)); prior.push(P.type_prior[t] || 0);
+    }
+    return { names, roots, mats, tonesets, prior };
+  })();
+  const LEAK = (() => {
+    const H = Array.from({ length: 12 }, () => new Float64Array(12));
+    for (let n = 0; n < 12; n++) for (let h = 2; h <= P.leak_harmonics; h++) H[n][mod(n + HSHIFT(h))] += P.leak_decay ** (h - 1);
+    return H;
+  })();
+  const dot = (a, b) => { let s = 0; for (let i = 0; i < 12; i++) s += a[i] * b[i]; return s; };
+  function scores(f) { return BANK.mats.map((m, i) => dot(m, f.chroma) + P.bass_bonus * (BANK.roots[i] === f.bass ? 1 : 0) + BANK.prior[i]); }
+  function detect(f) {
+    if (!f.chroma.some(x => x)) return { chord: null, score: 0, margin: 0 };
+    const s = scores(f); const order = s.map((v, i) => i).sort((a, b) => s[b] - s[a]);
+    const [r, t] = BANK.names[order[0]];
+    return { chord: new Chord(r, t), score: s[order[0]], margin: s[order[0]] - s[order[1]],
+      alternatives: order.slice(1, 4).map(i => [new Chord(...BANK.names[i]).name, s[i]]) };
+  }
+
+  // ------------------------------------------------------------ exact notes
+  const hz = m => 440 * 2 ** ((m - 69) / 12);
+  function bandMax(spec, f, n) {
+    const a = Math.floor(f * 2 ** (-P.note_cents / 1200) * n / P.sr), b = Math.ceil(f * 2 ** (P.note_cents / 1200) * n / P.sr) + 1;
+    if (b >= spec.length) return 0;
+    let m = 0; for (let i = a; i < b; i++) if (spec[i] > m) m = spec[i]; return m;
+  }
+  function salience(spec, m, others, n) {
+    const vals = [];
+    for (let h = 1; h <= P.note_harmonics; h++) {
+      const f = h * hz(m); if (f > P.note_fmax) break;
+      let shared = false;
+      for (const o of others) { for (let k = 1; k <= P.note_overtones; k++) if (Math.abs(1200 * Math.log2(f / (k * hz(o)))) < 50) { shared = true; break; } if (shared) break; }
+      if (shared) continue;
+      vals.push(bandMax(spec, f, n) * Math.sqrt(h));
+    }
+    return vals.length ? Math.max(...vals) : null;
+  }
+  function noteRatios(spec, voicing) {
+    const n = 2 * (spec.length - 1);
+    const notes = [...new Set(voicing)].sort((a, b) => a - b);
+    const s = new Map(notes.map(m => [m, salience(spec, m, notes.filter(o => mod(o) !== mod(m)), n)]));
+    const known = [...s.values()].filter(v => v != null);
+    if (!known.length) return {};
+    const ref = median(known) + 1e-12; const out = {};
+    for (const [m, v] of s) { if (v == null) continue; const pc = mod(m); out[pc] = Math.max(out[pc] || 0, v / ref); }
+    return out;
+  }
+  function missingNotes(spec, voicing) {
+    if (!spec || P.note_min_rel <= 0 || new Set(voicing).size < 2) return [];
+    const r = noteRatios(spec, voicing);
+    return Object.keys(r).map(Number).filter(pc => r[pc] < P.note_min_rel).sort((a, b) => a - b);
+  }
+
+  // ------------------------------------------------------------ verify
+  function verify(f, expected, shape = null, voicing = null) {
+    const ch = parse(expected);
+    const s = scores(f);
+    let idx = BANK.names.findIndex(([r, t]) => r === ch.root && t === ch.type);
+    if (idx < 0) idx = s.indexOf(Math.max(...s));
+    const c = f.chroma;
+    shape = shape || fingering(ch);
+    const played = shapeTones(shape);
+    const tones = ch.tones;
+    let required = new Set([...tones].filter(x => played.has(x))); if (!required.size) required = tones;
+    const allowed = new Set([...tones, ...played]);
+    const cmax = c.some(x => x) ? Math.max(...c) : 1;
+    const missing = [];
+    for (const nn of required) {
+      let leak = 0; for (const o of required) if (o !== nn) leak += c[o] * LEAK[o][nn];
+      if (c[nn] - P.leak_alpha * leak < P.missing_rel * cmax) missing.push(nn);
+    }
+    if (!voicing) voicing = shapeNotes(shape).map(x => x[1]);
+    for (const nn of missingNotes(f.spectrum, voicing)) if (!missing.includes(nn)) missing.push(nn);
+    missing.sort((a, b) => mod(a - ch.root) - mod(b - ch.root));
+    const prof = profile(required, P.extra_harmonics, P.extra_decay);
+    const k = dot(c, prof);
+    const extra = []; for (let q = 0; q < 12; q++) if (!allowed.has(q) && c[q] > P.extra_ratio * prof[q] * k + P.extra_add) extra.push(q);
+    const rivals = []; BANK.tonesets.forEach((ts, i) => { const sub = ts.size < allowed.size && [...ts].every(x => allowed.has(x)); if (!sub) rivals.push(s[i]); });
+    const best = rivals.length ? Math.max(...rivals) : Math.max(...s);
+    const ok = c.some(x => x) && s[idx] >= best - P.verify_margin && !missing.length && !extra.length;
+    const strings = ok ? [] : suspectStrings(shape, missing, extra, f.peaks);
+    const heard = detect(f).chord;
+    return { ok, expected: ch.name, missing: missing.map(x => DISPLAY[x]), extra: extra.map(x => DISPLAY[x]), strings, heard: heard ? heard.name : null, score: s[idx] };
+  }
+  function suspectStrings(shape, missing, extra, peaks) {
+    const out = new Set(); const extraMidi = new Set();
+    for (const [fq] of peaks || []) { const m = Math.round(69 + 12 * Math.log2(fq / 440)); if (extra.includes(mod(m))) extraMidi.add(m); }
+    shape.forEach((fret, s) => {
+      if (fret <= 0) return;
+      const midi = OPEN_STRINGS[s] + fret, note = mod(midi), num = 6 - s;
+      if (missing.includes(note)) out.add(num);
+      else if (extraMidi.size) { for (const m of extraMidi) if (Math.abs(midi - m) === 1) out.add(num); }
+      else if (extra.some(e => [1, 11].includes(mod(note - e)))) out.add(num);
+    });
+    if (!out.size) shape.forEach((fret, s) => { if (fret === 0 && missing.includes(mod(OPEN_STRINGS[s]))) out.add(6 - s); });
+    return [...out].sort((a, b) => a - b);
+  }
+  function hintHe(v) {
+    if (v.ok) return '✓ נכון';
+    const parts = [];
+    if (v.missing.length) parts.push('חסר ' + v.missing.join(', '));
+    if (v.extra.length) parts.push('נשמע תו עודף: ' + v.extra.join(', '));
+    if (v.strings.length) parts.push('בדוק מיתר ' + v.strings.join(', '));
+    if (!parts.length && v.heard) parts.push('נשמע כמו ' + v.heard);
+    return '✗ ' + parts.join(' · ');
+  }
+
+  // ------------------------------------------------------------ onsets (streaming)
+  const WIN = 512, HOP = 128;
+  class OnsetTracker {
+    constructor() {
+      this.histN = Math.max(8, Math.floor(P.onset_history * P.sr / HOP));
+      this.gap = Math.floor(P.onset_min_gap * P.sr / HOP);
+      this.flux = []; this.rms = []; this.last = -1e9; this.k = 0;
+      this.buf = new Float64Array(0); this.prev = null;
+      this.top = Math.floor(P.onset_fmax * WIN / P.sr) + 1;
+    }
+    _push(flux, rms) {
+      this.flux.push(flux); this.rms.push(rms); this.k++;
+      let found = null; const L = this.flux.length;
+      if (L >= 3) {
+        const i = this.k - 2, f = this.flux[L - 2];
+        const a = Math.max(0, L - 2 - this.histN);
+        const med = L - 2 > a ? median(this.flux.slice(a, L - 2)) : 0;
+        const back = L - 2 > a ? median(this.rms.slice(a, L - 2)) : 0;
+        const thr = P.onset_ratio * med + P.onset_min_flux;
+        if (f >= this.flux[L - 3] && f > this.flux[L - 1] && f > thr &&
+            Math.max(this.rms[L - 2], this.rms[L - 1]) > back + P.onset_min_rise && i - this.last >= this.gap) {
+          let j = i, k = L - 2;
+          while (k > 0 && j - 1 > this.last && i - j < 8 && this.flux[k - 1] > 0.5 * thr) { j--; k--; }
+          found = j; this.last = i;
+        }
+      }
+      if (this.flux.length > 4 * this.histN) { const cut = this.flux.length - 2 * this.histN; this.flux = this.flux.slice(cut); this.rms = this.rms.slice(cut); }
+      return found;
+    }
+    feed(block) {
+      const nb = new Float64Array(this.buf.length + block.length); nb.set(this.buf); nb.set(block, this.buf.length); this.buf = nb;
+      const out = []; let off = 0;
+      while (this.buf.length - off >= WIN) {
+        const fr = this.buf.subarray(off, off + WIN);
+        const sp = magSpectrum(fr, WIN); const mag = new Float64Array(this.top);
+        for (let i = 0; i < this.top; i++) mag[i] = Math.log1p(P.onset_log_gain * sp[i]);
+        let flux = 0; if (this.prev) for (let i = 0; i < this.top; i++) flux += Math.max(mag[i] - this.prev[i], 0);
+        this.prev = mag;
+        let ss = 0; for (let i = 0; i < WIN; i++) ss += fr[i] * fr[i];
+        const i = this._push(flux, Math.sqrt(ss / WIN));
+        if (i != null) out.push(i * HOP + WIN / 2);
+        off += HOP;
+      }
+      this.buf = this.buf.slice(off);
+      return out;
+    }
+  }
+
+  // ------------------------------------------------------------ tuner (YIN)
+  function yin(x0, sr, fmin, fmax, threshold) {
+    const N = x0.length; let mean = 0; for (const v of x0) mean += v; mean /= N;
+    const x = Float64Array.from(x0, v => v - mean);
+    const tmin = Math.floor(sr / fmax), tmax = Math.min(Math.floor(sr / fmin), N >> 1);
+    const w = N - tmax; if (w <= 0 || tmax <= tmin + 2) return null;
+    const d = new Float64Array(tmax + 1);
+    for (let t = 1; t <= tmax; t++) { let s = 0; for (let j = 0; j < w; j++) { const e = x[j] - x[j + t]; s += e * e; } d[t] = s; }
+    const cm = new Float64Array(tmax + 1); cm[0] = 1; let cs = 0;
+    for (let t = 1; t <= tmax; t++) { cs += d[t]; cm[t] = cs ? d[t] * t / cs : 1; }
+    let tau = null;
+    for (let t = tmin; t < tmax; t++) if (cm[t] < threshold) { while (t + 1 < tmax && cm[t + 1] < cm[t]) t++; tau = t; break; }
+    if (tau == null) return null;
+    let shift = 0;
+    if (tau >= 1 && tau < tmax) { const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a - 2 * b + c; shift = den ? 0.5 * (a - c) / den : 0; }
+    return sr / (tau + shift);
+  }
+  function tune(frame) {
+    let ss = 0; for (const v of frame) ss += v * v;
+    if (Math.sqrt(ss / frame.length) < 1e-4) return null;
+    const f = yin(frame, P.sr, P.tuner_fmin, P.tuner_fmax, P.tuner_threshold);
+    if (!f) return null;
+    const midi = 69 + 12 * Math.log2(f / 440), m = Math.round(midi);
+    let bi = 0; OPEN_STRINGS.forEach((o, i) => { if (Math.abs(midi - o) < Math.abs(midi - OPEN_STRINGS[bi])) bi = i; });
+    return { freq: f, note: DISPLAY[mod(m)] + (Math.floor(m / 12) - 1), cents: (midi - m) * 100, string: 6 - bi, midi };
+  }
+
+  return { P, DISPLAY, OPEN_STRINGS, TYPES, Chord, parse, isChord, fingering, shapeNotes, shapeTones,
+    analyse, detect, verify, hintHe, OnsetTracker, tune, magSpectrum, noteRatios, mod };
+})();
+if (typeof module !== 'undefined') module.exports = WhaleEngine;
+
+</script>
+<script>
+{
+const E = WhaleEngine, P = E.P, SR = P.sr;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem('whale.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('whale.' + k, JSON.stringify(v)); } catch (e) {} } };
+
+// ------------------------------------------------------------ state
+const PRAC_ALL = ['C', 'D', 'E', 'G', 'A', 'Am', 'Em', 'Dm', 'E7', 'A7', 'D7', 'G7', 'C7', 'B7', 'Cmaj7', 'Fmaj7', 'Am7', 'Em7', 'Dsus4', 'Asus2', 'F', 'Bm', 'Bb', 'F#m'];
+const DEMO = [
+  { id: 'd1', title: 'תרגיל ראשון: G · C · D', capo: 0, sections: [{ n: 'בית', c: ['G', 'C', 'G', 'D'] }, { n: 'פזמון', c: ['C', 'D', 'G', 'G'] }], form: [0, 1, 0, 1] },
+  { id: 'd2', title: 'ארבעת האקורדים: Am · F · C · G', capo: 0, sections: [{ n: 'סיבוב', c: ['Am', 'F', 'C', 'G'] }], form: [0, 0] },
+  { id: 'd3', title: 'בלוז ב-A', capo: 0, sections: [{ n: '12 תיבות', c: ['A7', 'A7', 'A7', 'A7', 'D7', 'D7', 'A7', 'A7', 'E7', 'D7', 'A7', 'E7'] }], form: [0] },
+];
+const S = Object.assign({ mode: 'prac', pracSel: ['G', 'C', 'D', 'Em', 'Am'], pracI: 0, shuffle: false, songs: DEMO, songId: 'd1', songI: 0, follow: true, gain: 1 }, store.get('state', {}));
+if (!Array.isArray(S.songs) || !S.songs.length) S.songs = DEMO;
+const T = { streak: 0, fb: null, heard: null, tuner: null, undo: [], listening: false, clipMode: false };
+const save = () => store.set('state', { pracSel: S.pracSel, pracI: S.pracI, shuffle: S.shuffle, songs: S.songs, songId: S.songId, songI: S.songI, follow: S.follow, gain: S.gain });
+const song = () => S.songs.find(s => s.id === S.songId) || S.songs[0];
+const seq = sg => sg.form.flatMap(si => sg.sections[si].c.map((c, j) => ({ si, j, c })));
+const tr = sg => sg.transpose || 0;
+// what you hear, and what you finger with the capo
+const sounding = (sg, c) => E.parse(c).transposed(tr(sg));
+const shapeOf = (ch, capo) => E.fingering(ch.transposed(-capo));
+const absShape = (sh, capo) => sh.map(f => f < 0 ? -1 : f + capo);
+
+function target() {
+  if (S.mode === 'prac') { const c = S.pracSel[((S.pracI % S.pracSel.length) + S.pracSel.length) % S.pracSel.length] || 'G'; const ch = E.parse(c); return { ch, capo: 0, shape: E.fingering(ch), next: null }; }
+  if (S.mode === 'song') {
+    const sg = song(), q = seq(sg); S.songI = ((S.songI % q.length) + q.length) % q.length;
+    const cur = q[S.songI], nx = q[(S.songI + 1) % q.length], capo = sg.capo || 0;
+    const ch = sounding(sg, cur.c), nch = sounding(sg, nx.c);
+    return { ch, capo, shape: shapeOf(ch, capo), next: nch.transposed(-capo).name, sec: sg.sections[cur.si].n, pos: (S.songI + 1) + '/' + q.length };
+  }
+  return null;
+}
+
+// ------------------------------------------------------------ whale screen
+const svg = $('whale');
+function diag(sh, x0, y0) {
+  const w = 96, h = 88, sx = w / 5, fy = h / 4; const fr = sh.filter(f => f > 0); let base = 1;
+  if (fr.length && Math.max(...fr) > 4) base = Math.min(...fr);
+  let o = base === 1 ? `<rect x="${x0}" y="${y0 - 4}" width="${w}" height="5" fill="#e6eef3"/>` : `<text x="${x0 - 8}" y="${y0 + fy / 2 + 5}" text-anchor="end" font-size="14" fill="#9fb6c6" font-family="Heebo">${base}</text>`;
+  for (let k = 0; k <= 4; k++) o += `<line x1="${x0}" x2="${x0 + w}" y1="${y0 + k * fy}" y2="${y0 + k * fy}" stroke="#6f8ea3" stroke-width="1.2"/>`;
+  for (let s = 0; s < 6; s++) o += `<line x1="${x0 + s * sx}" x2="${x0 + s * sx}" y1="${y0}" y2="${y0 + h}" stroke="#a9c0cf" stroke-width="${1.6 - s * .15}"/>`;
+  sh.forEach((f, s) => { const x = x0 + s * sx; if (f < 0) o += `<text x="${x}" y="${y0 - 9}" text-anchor="middle" font-size="12" fill="#ff8a6e" font-family="Heebo">✕</text>`; else if (f === 0) o += `<circle cx="${x}" cy="${y0 - 13}" r="4.5" fill="none" stroke="#e6eef3" stroke-width="1.5"/>`; else o += `<circle cx="${x}" cy="${y0 + (f - base + .5) * fy}" r="7.5" fill="#ff6b4a"/>`; });
+  return o;
+}
+const T_ = (x, y, s, fill, txt, extra = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${fill}" font-family="Heebo" ${extra}>${esc(txt)}</text>`;
+function screen() {
+  const fbc = T.fb == null ? '#17384f' : T.fb.ok ? '#1f9a60' : '#e0443a';
+  let body = '';
+  if (S.mode === 'tune') {
+    const t = T.tuner;
+    const inTune = t && Math.abs(t.cents) < 5;
+    const nx = 262 + (t ? Math.max(-50, Math.min(50, t.cents)) : 0) * 2.2;
+    body = T_(262, 175, 58, '#fff', t ? t.note : '—', 'text-anchor="middle" font-weight="700" font-family="Rubik"') +
+      T_(262, 120, 13, '#9fb6c6', t ? 'מיתר ' + t.string + ' · ' + t.freq.toFixed(1) + ' Hz' : 'פרטו מיתר אחד', 'text-anchor="middle"') +
+      `<line x1="152" x2="372" y1="206" y2="206" stroke="#3b5a6f" stroke-width="2"/><line x1="262" x2="262" y1="196" y2="216" stroke="#9fb6c6" stroke-width="2"/>` +
+      (t ? `<circle cx="${nx}" cy="206" r="8" fill="${inTune ? '#1f9a60' : '#ff6b4a'}"/>` : '');
+    T.fb = t ? { ok: inTune, t: inTune ? '✓ מכוון' : (t.cents < 0 ? 'נמוך ' : 'גבוה ') + Math.abs(t.cents).toFixed(0) + ' סנט — ' + (t.cents < 0 ? 'הדק' : 'שחרר') } : null;
+  } else if (S.mode === 'free') {
+    const h = T.heard;
+    const sh = h ? E.fingering(h.chord) : null;
+    body = T_(150, 190, h && h.chord.name.length > 4 ? 40 : 54, '#fff', h ? h.chord.name : '?', 'font-weight="700" font-family="Rubik"') +
+      T_(152, 226, 13, '#9fb6c6', h ? 'אולי: ' + h.alternatives.map(a => a[0]).join(' · ') : 'נגנו אקורד') + (sh ? diag(sh, 268, 138) : '');
+  } else {
+    const t = target();
+    const play = t.ch.transposed(-t.capo).name;
+    body = T_(150, 190, play.length > 4 ? 40 : 54, '#fff', play, 'font-weight="700" font-family="Rubik"') +
+      (t.capo ? T_(152, 212, 12.5, '#ffd36b', 'קפו ' + t.capo + ' · נשמע ' + t.ch.name) : '') +
+      (t.next ? T_(152, 232, 13, '#9fb6c6', '▶ ' + t.next) : T_(152, 232, 13, '#9fb6c6', 'רצף ' + T.streak + '/3')) +
+      T_(148, 114, 12, '#9fb6c6', S.mode === 'song' ? t.pos : (S.pracSel.length ? ((S.pracI % S.pracSel.length + S.pracSel.length) % S.pracSel.length + 1) + '/' + S.pracSel.length : '')) +
+      (t.sec ? T_(376, 114, 13, '#cfe2ee', t.sec, 'text-anchor="end"') : '') + diag(t.shape, 268, 138);
+  }
+  const fbt = T.fb == null ? (T.listening ? 'מקשיב…' : T.clipMode ? 'הקליטו קטע למטה' : 'לחצו «התחל להאזין»') : T.fb.t;
+  svg.innerHTML = `<defs><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a98cb"/><stop offset="1" stop-color="#2a6a96"/></linearGradient><linearGradient id="tl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f75a4"/><stop offset="1" stop-color="#1e5379"/></linearGradient></defs>
+ <ellipse cx="300" cy="318" rx="230" ry="9" fill="#06263c" opacity=".55"/>
+ <path d="M458 150 L506 152 L506 206 L458 210 Z" fill="url(#tl)"/><path d="M500 150 C530 120 560 92 590 80 C584 112 566 150 520 170 Z" fill="url(#tl)"/><path d="M500 208 C530 236 560 262 590 276 C584 244 566 206 520 188 Z" fill="url(#tl)"/>
+ <path d="M520 170 C548 168 572 172 590 178 M520 188 C548 190 572 186 590 180" stroke="#173f5c" stroke-width="5" fill="none" stroke-linecap="round"/>
+ <circle cx="506" cy="179" r="11" fill="#173f5c"/><circle cx="506" cy="179" r="4.5" fill="#7fb3d6"/>
+ <path d="M38 196 C36 108 140 58 272 58 C380 58 448 104 470 168 C478 196 470 214 462 226 C436 280 360 308 262 308 C132 308 40 280 38 196 Z" fill="url(#bd)"/>
+ <path d="M58 236 C110 292 214 306 296 304 C380 302 436 272 460 228 C420 262 360 280 280 282 C190 284 110 268 58 236 Z" fill="#d4e7f1"/>
+ <path d="M70 140 C110 84 210 66 300 66" stroke="#8cc4e6" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>
+ <circle cx="196" cy="58" r="6" fill="#173f5c"/>
+ <path d="M188 46 C182 30 186 18 194 10 M204 46 C210 30 206 18 198 10" stroke="#9ccbe8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="${T.listening ? .95 : .35}"/>
+ <circle cx="82" cy="182" r="9" fill="#0d2536"/><circle cx="85" cy="179" r="3" fill="#fff"/>
+ <path d="M44 214 C70 226 92 226 108 218" stroke="#173f5c" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <rect x="128" y="90" width="268" height="176" rx="18" fill="#0b1f2d"/><rect x="136" y="98" width="252" height="160" rx="12" fill="#0f2a3d"/>
+ ${body}
+ <rect x="136" y="236" width="252" height="22" fill="${fbc}"/>
+ <text x="262" y="252" font-size="13" font-weight="600" fill="#fff" font-family="Heebo" text-anchor="middle" direction="rtl">${esc(fbt)}</text>`;
+}
+
+// ------------------------------------------------------------ panels
+function render() {
+  for (const m of ['prac', 'song', 'free', 'tune']) { $('t-' + m).setAttribute('aria-pressed', S.mode === m); $('p-' + m).hidden = S.mode !== m; }
+  $('clip').hidden = !T.clipMode;
+  if (S.mode === 'prac') {
+    const cur = S.pracSel[((S.pracI % S.pracSel.length) + S.pracSel.length) % S.pracSel.length];
+    $('pracChips').innerHTML = PRAC_ALL.map(c => `<button class="chip${S.pracSel.includes(c) ? ' sel' : ''}${c === cur ? ' on' : ''}" data-c="${c}" aria-pressed="${S.pracSel.includes(c)}">${c}</button>`).join('');
+    $('pracShuffle').checked = S.shuffle;
+  }
+  if (S.mode === 'song') {
+    const sg = song(), q = seq(sg), cur = q[S.songI] || q[0];
+    $('songChords').innerHTML = `<div class="note">${esc(sg.title)}</div>` + sg.sections.map((sec, si) => `<div class="sec"><b>${esc(sec.n)}</b>${sec.c.map((c, j) => {
+      const d = sounding(sg, c).transposed(-(sg.capo || 0)).name; const ed = sg.orig && sg.orig[si] && sg.orig[si][j] !== c;
+      return `<button class="chip${cur.si === si && cur.j === j ? ' on' : ''}${ed ? ' ed' : ''}" data-si="${si}" data-j="${j}">${esc(d)}</button>`; }).join('')}</div>`).join('');
+    $('trV').textContent = (tr(sg) > 0 ? '+' : '') + tr(sg); $('cpV').textContent = sg.capo ? 'שריג ' + sg.capo : 'ללא';
+    $('fav').textContent = sg.fav ? '★ מועדף' : '☆ מועדף'; $('fav').setAttribute('aria-pressed', !!sg.fav);
+    $('follow').checked = S.follow; $('undo').disabled = !T.undo.length; $('del').hidden = sg.id.startsWith('d');
+    const list = S.songs.slice().sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
+    $('lib').innerHTML = list.map(s => `<button class="${s.id === sg.id ? 'on' : ''}" data-id="${esc(s.id)}"><span>${s.fav ? '★ ' : ''}${esc(s.title)}</span><span class="note">${s.sections.reduce((n, x) => n + x.c.length, 0)} אקורדים</span></button>`).join('');
+  }
+  $('gainV').textContent = '×' + S.gain; $('gain').value = S.gain;
+  screen(); save();
+}
+const setMode = m => { S.mode = m; T.fb = null; T.streak = 0; render(); };
+for (const m of ['prac', 'song', 'free', 'tune']) $('t-' + m).onclick = () => setMode(m);
+$('pracChips').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
+  if (S.pracSel.includes(c)) { if (S.pracSel.length > 1) S.pracSel = S.pracSel.filter(x => x !== c); } else S.pracSel.push(c);
+  T.streak = 0; T.fb = null; render(); };
+const pracMove = d => { if (S.shuffle && S.pracSel.length > 1) { let n; do n = Math.floor(Math.random() * S.pracSel.length); while (n === S.pracI % S.pracSel.length); S.pracI = n; } else S.pracI += d; T.streak = 0; T.fb = null; render(); };
+$('pracNext').onclick = () => pracMove(1); $('pracPrev').onclick = () => pracMove(-1);
+$('pracShuffle').onchange = e => { S.shuffle = e.target.checked; render(); };
+const songMove = d => { S.songI += d; T.fb = null; render(); };
+$('sNext').onclick = () => songMove(1); $('sPrev').onclick = () => songMove(-1);
+const edit = f => { const sg = song(); T.undo.push(JSON.stringify(sg)); if (T.undo.length > 30) T.undo.shift(); f(sg); render(); };
+$('trUp').onclick = () => edit(sg => sg.transpose = Math.min(11, tr(sg) + 1)); $('trDn').onclick = () => edit(sg => sg.transpose = Math.max(-11, tr(sg) - 1));
+$('cpUp').onclick = () => edit(sg => sg.capo = Math.min(9, (sg.capo || 0) + 1)); $('cpDn').onclick = () => edit(sg => sg.capo = Math.max(0, (sg.capo || 0) - 1));
+const OPEN_KEYS = new Set(['C', 'C7', 'Cmaj7', 'D', 'Dm', 'D7', 'Dsus4', 'Dsus2', 'Dm7', 'Dmaj7', 'E', 'Em', 'E7', 'Em7', 'Esus4', 'Fmaj7', 'G', 'G7', 'A', 'Am', 'A7', 'Am7', 'Amaj7', 'Asus4', 'Asus2', 'B7']);
+$('cpSug').onclick = () => { const sg = song(); const all = sg.sections.flatMap(s => s.c).map(c => sounding(sg, c));
+  let best = 0, bn = -1; for (let k = 0; k <= 7; k++) { const n = all.filter(ch => OPEN_KEYS.has(ch.transposed(-k).name)).length; if (n > bn) { bn = n; best = k; } }
+  edit(s => s.capo = best); status(best ? `קפו ${best}: ${bn} מתוך ${all.length} אקורדים בצורה פתוחה` : `בלי קפו: ${bn} מתוך ${all.length} אקורדים כבר פתוחים`); };
+$('fav').onclick = () => edit(sg => sg.fav = !sg.fav);
+$('undo').onclick = () => { const v = T.undo.pop(); if (!v) return; const o = JSON.parse(v); S.songs = S.songs.map(s => s.id === o.id ? o : s); render(); };
+$('del').onclick = e => { const sg = song(); if (e.target.dataset.sure !== '1') { e.target.dataset.sure = '1'; e.target.textContent = 'למחוק באמת?'; setTimeout(() => { e.target.dataset.sure = ''; e.target.textContent = 'מחק שיר'; }, 3000); return; }
+  S.songs = S.songs.filter(s => s.id !== sg.id); S.songId = S.songs[0].id; S.songI = 0; e.target.dataset.sure = ''; e.target.textContent = 'מחק שיר'; render(); };
+$('follow').onchange = e => { S.follow = e.target.checked; save(); };
+$('lib').onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; S.songId = b.dataset.id; S.songI = 0; T.undo = []; T.fb = null; render(); };
+// chord replace picker
+let pickAt = null;
+$('songChords').onclick = e => { const b = e.target.closest('[data-si]'); if (!b) return; const si = +b.dataset.si, j = +b.dataset.j; const sg = song();
+  const q = seq(sg); const k = q.findIndex(x => x.si === si && x.j === j); if (k >= 0) S.songI = k;
+  pickAt = { si, j }; const cur = sg.sections[si].c[j];
+  $('pickH').textContent = 'החלפת ' + sounding(sg, cur).transposed(-(sg.capo || 0)).name;
+  const roots = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'], types = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'sus2'];
+  $('pickChips').innerHTML = types.flatMap(t => roots.map(r => { const shown = E.parse(r + t); return `<button class="chip" data-v="${shown.name}">${shown.name}</button>`; })).join('');
+  $('pickAll').checked = false; $('pick').hidden = false; render(); };
+$('pickChips').onclick = e => { const b = e.target.closest('[data-v]'); if (!b || !pickAt) return;
+  const sg = song(); const shown = E.parse(b.dataset.v); const stored = shown.transposed((sg.capo || 0) - tr(sg)).name; const old = sg.sections[pickAt.si].c[pickAt.j];
+  edit(s => { if (!s.orig) s.orig = s.sections.map(x => x.c.slice()); if ($('pickAll').checked) s.sections.forEach(x => x.c = x.c.map(c => c === old ? stored : c)); else s.sections[pickAt.si].c[pickAt.j] = stored; });
+  $('pick').hidden = true; pickAt = null; };
+$('pickX').onclick = () => { $('pick').hidden = true; pickAt = null; };
+
+// ------------------------------------------------------------ import (chords only, no lyrics)
+const SEC_RE = /^\s*[\[(]?\s*(בית|פזמון|גשר|פתיחה|סיום|מעבר|קדם[- ]?פזמון|סולו|intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|refrain|hook)\b[^\])]*[\])]?\s*:?\s*$/i;
+function parseSong(text) {
+  const sections = []; let cur = null, capo = 0;
+  const he = { intro: 'פתיחה', verse: 'בית', chorus: 'פזמון', 'pre-chorus': 'קדם פזמון', prechorus: 'קדם פזמון', bridge: 'גשר', outro: 'סיום', solo: 'סולו', interlude: 'מעבר', refrain: 'פזמון', hook: 'פזמון' };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim(); if (!line) continue;
+    const cm = line.match(/(?:capo|קאפו|קפו)\D{0,12}(\d{1,2})/i); if (cm) { capo = +cm[1]; continue; }
+    const sm = line.match(SEC_RE); if (sm) { const k = sm[1].toLowerCase(); cur = { n: he[k] || sm[1], c: [] }; sections.push(cur); continue; }
+    const toks = line.replace(/[|()\[\]]/g, ' ').split(/\s+/).filter(t => t && !/^[-–x×*\d\/.]+$/.test(t));
+    if (toks.length && toks.every(t => E.isChord(t))) {
+      if (!cur) { cur = { n: sections.length ? 'חלק ' + (sections.length + 1) : 'בית', c: [] }; sections.push(cur); }
+      for (const t of toks) { const ch = E.parse(t); if (!(ch.type in E.TYPES)) continue; cur.c.push(ch.name); }
+    }
+  }
+  // chord sites write the shapes you finger under the capo; keep what sounds
+  if (capo) for (const s of sections) s.c = s.c.map(c => E.parse(c).transposed(capo).name);
+  const sec = sections.filter(s => s.c.length);
+  // identical sections with the same name become one section played again
+  const uniq = [], form = [];
+  for (const s of sec) { const k = uniq.findIndex(u => u.n === s.n && u.c.join() === s.c.join()); if (k >= 0) form.push(k); else { uniq.push(s); form.push(uniq.length - 1); } }
+  return { sections: uniq, form, capo };
+}
+$('impGo').onclick = () => { const r = parseSong($('impText').value);
+  if (!r.sections.length) { $('impMsg').textContent = 'לא מצאתי שורות אקורדים. ודאו שהאקורדים בשורה נפרדת מהמילים.'; return; }
+  const id = 's' + Date.now().toString(36);
+  S.songs.push({ id, title: $('impTitle').value.trim() || 'שיר חדש', capo: r.capo, transpose: 0, sections: r.sections, form: r.form, orig: r.sections.map(x => x.c.slice()) });
+  S.songId = id; S.songI = 0; T.undo = []; $('impText').value = ''; $('impTitle').value = '';
+  $('impMsg').textContent = `נוספו ${r.sections.length} חלקים, ${r.sections.reduce((n, x) => n + x.c.length, 0)} אקורדים${r.capo ? ', קפו ' + r.capo : ''}. בדקו ותקנו אקורד שגוי בלחיצה עליו.`; render(); };
+
+// ------------------------------------------------------------ deciding on one strum
+function judge(frameFull, clip = false) {
+  if (S.mode === 'free') { const d = E.detect(E.analyse(frameFull, P.nfft_full)); if (!d.chord) return null; T.heard = d; T.fb = { ok: true, t: 'נשמע ' + d.chord.name };
+    log('freeLog', `<b dir="ltr">${d.chord.name}</b> · אולי ${d.alternatives.map(a => a[0]).join(', ')}`, true); return d; }
+  const t = target(); if (!t) return null;
+  const sh = absShape(t.shape, t.capo);
+  const v = E.verify(E.analyse(frameFull, P.nfft_full), t.ch, sh);
+  T.fb = { ok: v.ok, t: E.hintHe(v) };
+  if (S.mode === 'prac') { T.streak = v.ok ? T.streak + 1 : 0; if (T.streak >= 3) { T.fb.t = '✓ נכון! עוברים לאקורד הבא'; if (clip) { S.pracI++; T.streak = 0; } else setTimeout(() => pracMove(1), 700); } }
+  if (S.mode === 'song' && v.ok && S.follow) { if (clip) S.songI++; else setTimeout(() => { S.songI++; T.fb = null; render(); }, 450); }
+  return v;
+}
+function quick(frameFast) {   // early answer at ~150 ms, only when sure and right
+  const f = E.analyse(frameFast, P.nfft_fast);
+  if (S.mode === 'free') { const d = E.detect(f); if (d.chord && d.margin >= P.fast_confidence) { T.heard = d; T.fb = { ok: true, t: 'נשמע ' + d.chord.name }; screen(); } return; }
+  const t = target(); if (!t) return;
+  const d = E.detect(f); if (d.margin < P.fast_confidence) return;
+  const v = E.verify(f, t.ch, absShape(t.shape, t.capo)); if (v.ok) { T.fb = { ok: true, t: '✓ …' }; screen(); }
+}
+function log(id, html, ok) { const ul = $(id); ul.insertAdjacentHTML('afterbegin', `<li class="${ok ? 'y' : 'n'}">${html}</li>`); while (ul.children.length > 8) ul.lastChild.remove(); }
+function status(s) { $('status').textContent = s; }
+
+// ------------------------------------------------------------ live audio
+const RING = SR * 6; const ring = new Float32Array(RING); let total = 0; let tracker = null; const pending = [];
+const at = (start, n) => { const out = new Float64Array(n); for (let i = 0; i < n; i++) { const k = start + i; out[i] = k >= 0 && k < total && total - k <= RING ? ring[k % RING] : 0; } return out; };
+let ctx = null, stream = null, proc = null, lastTune = 0;
+function makeResampler(inRate) {
+  if (inRate === SR) return x => x;
+  // 2 biquad low-pass stages at 7 kHz, then linear interpolation
+  const fc = 7000, w0 = 2 * Math.PI * fc / inRate, al = Math.sin(w0) / (2 * Math.SQRT1_2), cw = Math.cos(w0), a0 = 1 + al;
+  const b = [(1 - cw) / 2 / a0, (1 - cw) / a0, (1 - cw) / 2 / a0], a = [-2 * cw / a0, (1 - al) / a0];
+  const st = [[0, 0, 0, 0], [0, 0, 0, 0]]; const step = inRate / SR; let pos = 0, prev = 0;
+  return x => { const y = new Float32Array(x.length);
+    for (let i = 0; i < x.length; i++) { let v = x[i]; for (const s of st) { const o = b[0] * v + b[1] * s[0] + b[2] * s[1] - a[0] * s[2] - a[1] * s[3]; s[1] = s[0]; s[0] = v; s[3] = s[2]; s[2] = o; v = o; } y[i] = v; }
+    const out = []; while (pos < y.length) { const i = Math.floor(pos), fr = pos - i; const x0 = i - 1 < 0 ? prev : y[i - 1]; out.push(x0 + (y[i] - x0) * fr); pos += step; }
+    pos -= y.length; prev = y[y.length - 1]; return Float32Array.from(out); };
+}
+function push16(x) {
+  for (let i = 0; i < x.length; i++) ring[(total + i) % RING] = x[i] * S.gain;
+  const start = total; total += x.length;
+  let ss = 0; for (let i = 0; i < x.length; i++) ss += (x[i] * S.gain) ** 2; $('lvl').style.width = Math.min(100, Math.sqrt(ss / x.length) * 400) + '%';
+  if (S.mode === 'tune') { if (total - lastTune > SR * 0.08) { lastTune = total; T.tuner = E.tune(at(total - P.nfft_full, P.nfft_full)); screen(); } return; }
+  const blk = new Float64Array(x.length); for (let i = 0; i < x.length; i++) blk[i] = ring[(start + i) % RING];
+  for (const o of tracker.feed(blk)) pending.push({ o, fast: false });
+  while (pending.length) {
+    const p = pending[0], s0 = p.o + Math.round(P.onset_delay * SR);
+    if (!p.fast && total >= s0 + P.nfft_fast) { p.fast = true; quick(at(s0, P.nfft_fast)); }
+    if (total < s0 + P.nfft_full) break;
+    pending.shift(); judge(at(s0, P.nfft_full)); render();
+  }
+}
+async function start() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nomedia');
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC(); await ctx.resume();
+  const src = ctx.createMediaStreamSource(stream);
+  const rs = makeResampler(ctx.sampleRate);
+  tracker = new E.OnsetTracker(); pending.length = 0;
+  proc = ctx.createScriptProcessor(2048, 1, 1);
+  proc.onaudioprocess = e => push16(rs(e.inputBuffer.getChannelData(0)));
+  const mute = ctx.createGain(); mute.gain.value = 0;
+  src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+  T.listening = true; $('mic').textContent = '⏹ עצור'; $('mic').classList.add('on'); status('מקשיב. פרטו אקורד אחד בכל פעם.'); render();
+}
+function stop() { try { proc && proc.disconnect(); stream && stream.getTracks().forEach(t => t.stop()); ctx && ctx.close(); } catch (e) {}
+  T.listening = false; $('mic').textContent = '🎤 התחל להאזין'; $('mic').classList.remove('on'); $('lvl').style.width = '0'; status(''); render(); }
+$('mic').onclick = async () => {
+  if (T.listening) return stop();
+  try { await start(); }
+  catch (e) { T.clipMode = true; render();
+    status(e && e.name === 'NotAllowedError' && window.top === window ? 'הגישה למיקרופון נחסמה. אשרו אותה בהגדרות הדפדפן, או הקליטו קטע למטה.' : 'אין כאן גישה חיה למיקרופון — הקליטו קטע למטה, או פתחו את הדף כקובץ בדפדפן.');
+    $('clip').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+};
+$('gain').oninput = e => { S.gain = +e.target.value; $('gainV').textContent = '×' + S.gain; save(); };
+
+// ------------------------------------------------------------ recorded clip
+$('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; $('clipLog').innerHTML = ''; status('מנתח…');
+  try {
+    const buf = await f.arrayBuffer(); const AC = window.AudioContext || window.webkitAudioContext; const c = new AC();
+    const dec = await c.decodeAudioData(buf); c.close && c.close();
+    const len = Math.ceil(dec.duration * SR); const off = new OfflineAudioContext(1, len, SR);
+    const s = off.createBufferSource(); s.buffer = dec; s.connect(off.destination); s.start(); const r = await off.startRendering();
+    const x = r.getChannelData(0); let mx = 0; for (const v of x) mx = Math.max(mx, Math.abs(v));
+    const a = Float64Array.from(x, v => v * (mx > 0 ? 0.5 / mx : 1));
+    if (S.mode === 'tune') {   // one string per clip: median of the steady part
+      const got = []; for (let i = 0; i + P.nfft_full < a.length; i += SR / 10) { const t = E.tune(a.subarray(i, i + P.nfft_full)); if (t) got.push(t); }
+      if (!got.length) { status('לא נשמע צליל ברור. פרטו מיתר אחד והקליטו שנייה-שתיים.'); return; }
+      got.sort((p, q) => p.freq - q.freq); T.tuner = got[got.length >> 1];
+      status(`נשמע ${T.tuner.note}, ${T.tuner.cents > 0 ? '+' : ''}${T.tuner.cents.toFixed(0)} סנט`); render(); return;
+    }
+    const tk = new E.OnsetTracker(); const ons = tk.feed(a).concat(tk.feed(new Float64Array(640)));
+    if (!ons.length) { status('לא נמצאו פריטות בקטע. נסו קרוב יותר לגיטרה.'); return; }
+    let okN = 0;
+    ons.forEach((o, i) => { const s0 = o + Math.round(P.onset_delay * SR); const fr = a.slice(s0, s0 + P.nfft_full);
+      const full = new Float64Array(P.nfft_full); full.set(fr);
+      const t = target(); const v = judge(full, true); if (!v) return;
+      const sec = (o / SR).toFixed(1);
+      if (S.mode !== 'free') { okN += v.ok; log('clipLog', `${sec} ש׳ · <b dir="ltr">${t.ch.transposed(-t.capo).name}</b> · ${esc(E.hintHe(v))}`, v.ok); } });
+    status(S.mode === 'free' ? `נמצאו ${ons.length} פריטות` : `נמצאו ${ons.length} פריטות · ${okN} נכונות`); render();
+  } catch (err) { status('לא הצלחתי לקרוא את הקובץ. נסו wav, m4a או mp3.'); }
+  e.target.value = '';
+};
+
+T.clipMode = window.top !== window;   // inside claude.ai the frame blocks the microphone
+render();
+}
+</script>
+</body>
+</html>
