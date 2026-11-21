@@ -58,6 +58,9 @@ input[type=text]{min-height:44px;border-radius:12px;border:1.5px solid var(--rul
 .log .y{border-color:color-mix(in srgb,var(--good) 50%,var(--rule))}.log .n{border-color:color-mix(in srgb,var(--bad) 50%,var(--rule))}
 .help{background:color-mix(in srgb,var(--coral) 9%,var(--panel));border:1.5px solid color-mix(in srgb,var(--coral) 45%,var(--rule));border-radius:14px;padding:14px 16px;margin-top:12px}
 .help ol{margin:0;padding-inline-start:22px;display:grid;gap:6px}.help a{color:inherit;font-weight:600}
+.camwrap{position:relative;max-width:720px;margin:8px auto 0;border-radius:14px;overflow:hidden;background:#000}
+.camwrap video{display:block;width:100%;height:auto}.camwrap canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+#camMsg.step{color:var(--ink);font-weight:600;font-size:16px}
 .pick{position:fixed;inset:auto 0 0 0;background:var(--panel);border-top:2px solid var(--whale);padding:14px max(4vw,14px) 20px;box-shadow:0 -8px 30px #0004;z-index:5}
 .pick[hidden]{display:none}
 details{margin-top:8px}summary{cursor:pointer;min-height:32px}
@@ -89,6 +92,17 @@ details{margin-top:8px}summary{cursor:pointer;min-height:32px}
   <li data-m="free"><b>זיהוי חופשי</b> מנגנים מה שרוצים, והלוויתן אומר איזה אקורד שמע</li>
   <li data-m="tune"><b>טיונר</b> מכוונים את המיתרים, אחד בכל פעם</li>
  </ul>
+
+ <section id="cam" hidden>
+  <div class="ctl">
+   <button id="camOn">📷 מצלמת אצבעות (ניסוי)</button>
+   <button id="camCal" hidden>כיול מחדש</button>
+   <button id="camFlip" hidden>החלף מצלמה</button>
+  </div>
+  <p class="note" id="camMsg">הטלפון או המחשב מול צוואר הגיטרה, כך שרואים את האום ואת השריגים הראשונים. הלוויתן יראה איפה כל אצבע עומדת ויגיד מה להזיז. הווידאו לא נשמר ולא נשלח לשום מקום.</p>
+  <div class="camwrap" id="camWrap" hidden><video id="vid" playsinline muted autoplay></video><canvas id="ov"></canvas></div>
+  <ul class="log" id="camHints"></ul>
+ </section>
 
  <section id="help" class="help" hidden>
   <h2 id="helpH"></h2>
@@ -517,6 +531,86 @@ const WhaleEngine = (() => {
 })();
 if (typeof module !== 'undefined') module.exports = WhaleEngine;
 
+// Finger camera (experiment): maps fingertips on the video to (string, fret) and
+// compares them with the expected chord shape. Pure functions, no DOM.
+const WhaleCam = (() => {
+  const D5 = 1 - 2 ** (-5 / 12);                     // distance nut→fret 5 as a share of scale length
+  const fretPos = n => 1 - 2 ** (-n / 12);            // nut→fret n, same unit
+
+  // calibration: 4 points in normalized video coords
+  //   q[0] nut at string 6, q[1] nut at string 1, q[2] fret 5 at string 1, q[3] fret 5 at string 6
+  // bilinear patch P(u,v): u along the neck (0 nut, 1 fret 5), v across (0 string 6, 1 string 1)
+  function patch(q, u, v) {
+    const a = [q[0][0] + (q[3][0] - q[0][0]) * u, q[0][1] + (q[3][1] - q[0][1]) * u];   // string-6 edge
+    const b = [q[1][0] + (q[2][0] - q[1][0]) * u, q[1][1] + (q[2][1] - q[1][1]) * u];   // string-1 edge
+    return [a[0] + (b[0] - a[0]) * v, a[1] + (b[1] - a[1]) * v];
+  }
+  // inverse of the patch by Newton steps (works a little outside the quad too)
+  function toNeck(q, p) {
+    let u = 0.5, v = 0.5;
+    for (let it = 0; it < 20; it++) {
+      const P = patch(q, u, v), e = 1e-4;
+      const Pu = patch(q, u + e, v), Pv = patch(q, u, v + e);
+      const J = [[(Pu[0] - P[0]) / e, (Pv[0] - P[0]) / e], [(Pu[1] - P[1]) / e, (Pv[1] - P[1]) / e]];
+      const det = J[0][0] * J[1][1] - J[0][1] * J[1][0]; if (Math.abs(det) < 1e-12) break;
+      const rx = p[0] - P[0], ry = p[1] - P[1];
+      const du = (J[1][1] * rx - J[0][1] * ry) / det, dv = (-J[1][0] * rx + J[0][0] * ry) / det;
+      u += du; v += dv; if (Math.abs(du) + Math.abs(dv) < 1e-7) break;
+    }
+    return [u, v];
+  }
+  // fingertip → {string 1..6, fret, du (how far behind the fret, 0..1), sv (distance to nearest string, in string gaps)}
+  function place(q, p) {
+    const [u, v] = toNeck(q, p);
+    const t = u * D5;                                   // share of scale length from the nut
+    if (t <= 0 || t >= 0.6) return null;
+    const fret = Math.max(1, Math.ceil(-12 * Math.log2(1 - t)));
+    const lo = fretPos(fret - 1), hi = fretPos(fret);
+    const s6 = v * 5, si = Math.round(s6);
+    if (si < -1 || si > 6) return null;
+    return { string: 6 - Math.min(5, Math.max(0, si)), fret, inFret: (t - lo) / (hi - lo), off: Math.abs(s6 - si), u, v };
+  }
+  // where to draw fret n across string position v (for the overlay)
+  const point = (q, fret, v) => patch(q, fretPos(fret) / D5, v);
+  const stringV = s => (6 - s) / 5;                    // string number → v
+
+  // compare tips with the shape; tips: [{finger:1..4, p:[x,y]}], shape: 6 frets low E→high E (-1 mute)
+  function judge(q, tips, shape) {
+    const want = [];                                    // fretted notes the shape needs
+    shape.forEach((f, i) => { if (f > 0) want.push({ string: 6 - i, fret: f }); });
+    const open = new Set(shape.map((f, i) => f === 0 ? 6 - i : null).filter(x => x));
+    const seen = tips.map(t => ({ ...t, at: place(q, t.p) })).filter(t => t.at);
+    // barre: several wanted notes on the same fret beside each other count as one finger's job
+    const used = new Set(), hints = [], marks = [];
+    const dist = (a, w) => Math.abs(a.at.fret - w.fret) * 1.0 + Math.abs(a.at.string - w.string) * 1.2;
+    const order = want.map((w, i) => i);
+    const matched = new Array(want.length).fill(null);
+    // exact matches first, then nearest
+    for (const pass of [0, 1]) for (const i of order) {
+      if (matched[i]) continue; const w = want[i];
+      let best = null, bd = 1e9;
+      for (const t of seen) { if (used.has(t)) continue; const d = dist(t, w); if (pass === 0 && d > 0) continue; if (d < bd) { bd = d; best = t; } }
+      if (best && (pass === 0 || bd <= 3)) { matched[i] = best; used.add(best); }
+    }
+    want.forEach((w, i) => {
+      const t = matched[i];
+      if (!t) { hints.push({ kind: 'missing', text: `חסרה אצבע על מיתר ${w.string} בשריג ${w.fret}`, want: w }); marks.push({ want: w }); return; }
+      if (t.at.fret !== w.fret && t.at.string === w.string) hints.push({ kind: 'fret', text: `אצבע ${t.finger} בשריג ${t.at.fret} — הזיזו לשריג ${w.fret}`, finger: t.finger, want: w });
+      else if (t.at.string !== w.string && t.at.fret === w.fret) hints.push({ kind: 'string', text: `אצבע ${t.finger} על מיתר ${t.at.string} — צריכה להיות על מיתר ${w.string}`, finger: t.finger, want: w });
+      else if (t.at.string !== w.string || t.at.fret !== w.fret) hints.push({ kind: 'both', text: `אצבע ${t.finger} על מיתר ${t.at.string} שריג ${t.at.fret} — צריכה להיות במיתר ${w.string} שריג ${w.fret}`, finger: t.finger, want: w });
+      else if (t.at.inFret < 0.45) hints.push({ kind: 'far', text: `קרבו את אצבע ${t.finger} אל השריג — הצליל יהיה נקי יותר`, finger: t.finger, want: w, soft: true });
+      marks.push({ want: w, tip: t, ok: t.at.string === w.string && t.at.fret === w.fret });
+    });
+    // a spare finger lying right on a string that should ring open
+    for (const t of seen) if (!used.has(t) && open.has(t.at.string) && t.at.off < 0.25 && t.at.fret <= 4)
+      hints.push({ kind: 'open', text: `אצבע ${t.finger} אולי נוגעת במיתר ${t.at.string} שצריך להישמע פתוח — הרימו אותה מעט`, finger: t.finger, soft: true });
+    const hard = hints.filter(h => !h.soft);
+    return { ok: !hard.length && want.length > 0, hints, marks, seen };
+  }
+  return { place, toNeck, patch, point, stringV, judge, fretPos, D5 };
+})();
+if (typeof module !== 'undefined') module.exports = WhaleCam;
+
 </script>
 <script>
 {
@@ -630,6 +724,7 @@ function render() {
   for (const m of ['prac', 'song', 'free', 'tune']) { $('t-' + m).setAttribute('aria-pressed', S.mode === m); $('p-' + m).hidden = S.mode !== m; }
   for (const li of document.querySelectorAll('.modes li')) li.classList.toggle('on', li.dataset.m === S.mode);
   $('clip').hidden = !T.clipMode;
+  $('cam').hidden = !(S.mode === 'prac' || S.mode === 'song');
   if (S.mode === 'prac') {
     const cur = S.pracSel[((S.pracI % S.pracSel.length) + S.pracSel.length) % S.pracSel.length];
     $('pracChips').innerHTML = PRAC_ALL.map(c => `<button class="chip${S.pracSel.includes(c) ? ' sel' : ''}${c === cur ? ' on' : ''}" data-c="${c}" aria-pressed="${S.pracSel.includes(c)}">${c}</button>`).join('');
@@ -725,6 +820,7 @@ function judge(frameFull, clip = false) {
   const sh = absShape(t.shape, t.capo);
   const v = E.verify(E.analyse(frameFull, P.nfft_full), t.ch, sh);
   T.fb = { ok: v.ok, t: E.hintHe(v) };
+  if (!v.ok) { const ch = camHint(); status(ch ? '📷 ' + ch : ''); } else if (CAM.on) status('');
   if (S.mode === 'prac') { T.streak = v.ok ? T.streak + 1 : 0; if (T.streak >= 3) { T.fb.t = '✓ נכון! עוברים לאקורד הבא'; if (clip) { S.pracI++; T.streak = 0; } else setTimeout(() => pracMove(1), 700); } }
   if (S.mode === 'song' && v.ok && S.follow) { if (clip) S.songI++; else setTimeout(() => { S.songI++; T.fb = null; render(); }, 450); }
   return v;
@@ -863,6 +959,98 @@ $('file').onchange = async e => {
   } catch (err) { status('לא הצלחתי לקרוא את הקובץ. נסו wav, m4a או mp3.'); }
   e.target.value = '';
 };
+
+
+// ------------------------------------------------------------ finger camera (experiment)
+const CAM = { on: false, stream: null, facing: 'environment', lm: null, q: store.get('camq', null), pts: [], tips: {}, last: null, lastHintAt: 0, raf: 0, vtime: -1 };
+const CAL_STEPS = ['הקישו על <b>האום</b> (תחילת הצוואר) בגובה <b>המיתר העבה</b> — מיתר 6', 'הקישו על <b>האום</b> בגובה <b>המיתר הדק</b> — מיתר 1', 'הקישו על <b>השריג החמישי</b> בגובה <b>המיתר הדק</b> — מיתר 1', 'הקישו על <b>השריג החמישי</b> בגובה <b>המיתר העבה</b> — מיתר 6'];
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+const vid = $('vid'), ov = $('ov');
+const LOAD_ERR = 'לא הצלחתי לטעון את מודל זיהוי היד (צריך אינטרנט). כבו והפעילו את המצלמה כדי לנסות שוב.';
+const camMsg = (html, step = false) => { $('camMsg').innerHTML = html; $('camMsg').classList.toggle('step', step); };
+async function loadHands() {
+  if (CAM.lm) return CAM.lm;
+  camMsg('טוען את מודל זיהוי היד (פעם ראשונה, כמה שניות)…');
+  const { FilesetResolver, HandLandmarker } = await import(MP + '/vision_bundle.mjs');
+  const fs = await FilesetResolver.forVisionTasks(MP + '/wasm');
+  const opts = d => ({ baseOptions: { modelAssetPath: HAND_MODEL, delegate: d }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  try { CAM.lm = await HandLandmarker.createFromOptions(fs, opts('GPU')); } catch (e) { CAM.lm = await HandLandmarker.createFromOptions(fs, opts('CPU')); }
+  return CAM.lm;
+}
+async function camStart() {
+  if (window.top !== window) { camMsg(`המצלמה לא זמינה בתוך claude.ai. פתחו את <a href="${LIVE_URL}" target="_blank" rel="noopener">${LIVE_URL.replace('https://', '')}</a>`); return; }
+  try {
+    CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: CAM.facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e) {
+    camMsg(e && e.name === 'NotAllowedError' ? 'הדפדפן חסם את המצלמה. לחצו על הסמל משמאל לכתובת ← <b>מצלמה</b> ← <b>אפשר</b>, רעננו ונסו שוב.' : e && e.name === 'NotFoundError' ? 'לא נמצאה מצלמה במכשיר.' : 'לא הצלחתי לפתוח את המצלמה.');
+    return;
+  }
+  vid.srcObject = CAM.stream; await vid.play().catch(() => {});
+  $('camWrap').hidden = false; CAM.on = true; $('camOn').textContent = '⏹ כבה מצלמה'; $('camCal').hidden = false; $('camFlip').hidden = false;
+  CAM.loadErr = false; try { await loadHands(); } catch (e) { CAM.loadErr = true; }
+  if (!CAM.q) startCal(); else camMsg(CAM.loadErr ? LOAD_ERR : 'מזהה אצבעות. אם הגיטרה זזה — «כיול מחדש».');
+  cancelAnimationFrame(CAM.raf); CAM.raf = requestAnimationFrame(camLoop);
+}
+function camStop() {
+  cancelAnimationFrame(CAM.raf); try { CAM.stream && CAM.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+  CAM.on = false; CAM.last = null; $('camWrap').hidden = true; $('camOn').textContent = '📷 מצלמת אצבעות (ניסוי)'; $('camCal').hidden = true; $('camFlip').hidden = true; $('camHints').innerHTML = '';
+  camMsg('הטלפון או המחשב מול צוואר הגיטרה, כך שרואים את האום ואת השריגים הראשונים.');
+}
+function startCal() { CAM.pts = []; CAM.cal = true; camMsg('כיול (1/4): ' + CAL_STEPS[0], true); }
+ov.addEventListener('pointerdown', e => {
+  if (!CAM.cal) return; const r = ov.getBoundingClientRect();
+  CAM.pts.push([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+  if (CAM.pts.length < 4) camMsg(`כיול (${CAM.pts.length + 1}/4): ` + CAL_STEPS[CAM.pts.length], true);
+  else { CAM.q = CAM.pts.slice(); CAM.cal = false; store.set('camq', CAM.q); camMsg(CAM.loadErr ? 'מכויל. ' + LOAD_ERR : 'מכויל. שימו את האצבעות על האקורד שעל המסך.'); }
+});
+$('camOn').onclick = () => CAM.on ? camStop() : camStart();
+$('camCal').onclick = startCal;
+$('camFlip').onclick = async () => { CAM.facing = CAM.facing === 'environment' ? 'user' : 'environment'; camStop(); await camStart(); };
+const TIP = { 1: 8, 2: 12, 3: 16, 4: 20 };
+function camLoop() {
+  CAM.raf = requestAnimationFrame(camLoop);
+  if (!CAM.on || vid.readyState < 2) return;
+  const W = ov.clientWidth, H = ov.clientHeight, dpr = devicePixelRatio || 1;
+  if (ov.width !== Math.round(W * dpr)) { ov.width = Math.round(W * dpr); ov.height = Math.round(H * dpr); }
+  const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const X = p => p[0] * W, Y = p => p[1] * H;
+  if (CAM.cal || !CAM.q) {
+    g.fillStyle = '#ff6b4a'; CAM.pts.forEach(p => { g.beginPath(); g.arc(X(p), Y(p), 7, 0, 7); g.fill(); });
+    return;
+  }
+  const q = CAM.q, sh = (() => { const t = target(); return t ? absShape(t.shape, t.capo) : null; })();
+  // neck grid: strings and frets 0..7
+  g.lineWidth = 1; g.strokeStyle = 'rgba(160,210,240,.55)';
+  for (let s = 1; s <= 6; s++) { const a = WhaleCam.point(q, 0, WhaleCam.stringV(s)), b = WhaleCam.point(q, 7, WhaleCam.stringV(s)); g.beginPath(); g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b)); g.stroke(); }
+  for (let f = 0; f <= 7; f++) { const a = WhaleCam.point(q, f, -0.05), b = WhaleCam.point(q, f, 1.05); g.strokeStyle = f === 0 ? 'rgba(255,255,255,.8)' : 'rgba(160,210,240,.45)'; g.beginPath(); g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b)); g.stroke(); }
+  // hands
+  if (CAM.lm && vid.currentTime !== CAM.vtime) {
+    CAM.vtime = vid.currentTime;
+    let res; try { res = CAM.lm.detectForVideo(vid, performance.now()); } catch (e) { return; }
+    // the fretting hand = the one with most fingertips over the neck
+    let best = null, bn = -1;
+    for (const hand of res.landmarks || []) { const n = [8, 12, 16, 20].filter(i => WhaleCam.place(q, [hand[i].x, hand[i].y])).length; if (n > bn) { bn = n; best = hand; } }
+    if (best && bn > 0) for (const f of [1, 2, 3, 4]) { const p = [best[TIP[f]].x, best[TIP[f]].y], o = CAM.tips[f]; CAM.tips[f] = o ? [o[0] * 0.5 + p[0] * 0.5, o[1] * 0.5 + p[1] * 0.5] : p; }
+    else CAM.tips = {};
+  }
+  const tips = Object.entries(CAM.tips).map(([f, p]) => ({ finger: +f, p }));
+  if (!sh) return;
+  const r = WhaleCam.judge(q, tips, sh); CAM.last = tips.length ? r : null;
+  // wanted spots (hollow) and fingertips (filled), arrows from a wrong finger to its spot
+  for (const m of r.marks) {
+    const w = WhaleCam.point(q, m.want.fret - 0.3, WhaleCam.stringV(m.want.string));
+    g.lineWidth = 3; g.strokeStyle = m.ok ? '#1f9a60' : '#ff6b4a'; g.beginPath(); g.arc(X(w), Y(w), 11, 0, 7); g.stroke();
+    if (m.tip && !m.ok) { g.setLineDash([6, 5]); g.beginPath(); g.moveTo(X(m.tip.p), Y(m.tip.p)); g.lineTo(X(w), Y(w)); g.stroke(); g.setLineDash([]); }
+  }
+  for (const t of r.seen) { const ok = r.marks.some(m => m.tip === t && m.ok); g.fillStyle = ok ? '#1f9a60' : '#ffd36b'; g.beginPath(); g.arc(X(t.p), Y(t.p), 7, 0, 7); g.fill();
+    g.fillStyle = '#0b1f2d'; g.font = '700 10px Heebo,sans-serif'; g.textAlign = 'center'; g.fillText(String(t.finger), X(t.p), Y(t.p) + 3.5); }
+  const now = performance.now();
+  if (now - CAM.lastHintAt > 300) { CAM.lastHintAt = now;
+    $('camHints').innerHTML = !tips.length ? '<li>לא רואה את היד על הצוואר</li>' : r.ok && !r.hints.length ? '<li class="y">✓ האצבעות במקום</li>'
+      : r.hints.map(h => `<li class="${h.soft ? '' : 'n'}">${esc(h.text)}</li>`).join(''); }
+}
+function camHint() { const r = CAM.on && CAM.last; if (!r) return ''; const h = r.hints.find(x => !x.soft) || r.hints[0]; return h ? h.text : ''; }
 
 T.clipMode = window.top !== window;   // inside claude.ai the frame blocks the microphone
 render();
