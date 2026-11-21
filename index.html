@@ -21,6 +21,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Heebo,Arial,s
 h1{font:700 22px/1.1 Rubik,Heebo,sans-serif;margin:0;flex:1}
 .fig{position:relative;max-width:880px;margin:auto;aspect-ratio:600/330}
 .fig>svg{position:absolute;inset:0;width:100%;height:100%;direction:ltr}
+.fig>svg.go{cursor:pointer}
 .wrap{max-width:880px;margin:auto;padding:0 max(4vw,14px) 40px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
 button,select,input,textarea{font:inherit;color:inherit}
@@ -576,7 +577,8 @@ function screen() {
       T_(148, 114, 12, '#9fb6c6', S.mode === 'song' ? t.pos : (S.pracSel.length ? ((S.pracI % S.pracSel.length + S.pracSel.length) % S.pracSel.length + 1) + '/' + S.pracSel.length : '')) +
       (t.sec ? T_(376, 114, 13, '#cfe2ee', t.sec, 'text-anchor="end"') : '') + diag(t.shape, 268, 138);
   }
-  const fbt = T.fb == null ? (T.listening ? 'מקשיב…' : T.clipMode ? 'הקליטו קטע למטה' : 'לחצו «התחל להאזין»') : T.fb.t;
+  const fbt = T.fb == null ? (T.listening ? 'מקשיב…' : T.clipMode ? 'הקליטו קטע למטה' : '🎤 הקישו כאן כדי להתחיל להאזין') : T.fb.t;
+  svg.classList.toggle('go', !T.listening && !T.clipMode);
   svg.innerHTML = `<defs><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a98cb"/><stop offset="1" stop-color="#2a6a96"/></linearGradient><linearGradient id="tl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f75a4"/><stop offset="1" stop-color="#1e5379"/></linearGradient></defs>
  <ellipse cx="300" cy="318" rx="230" ry="9" fill="#06263c" opacity=".55"/>
  <path d="M458 150 L506 152 L506 206 L458 210 Z" fill="url(#tl)"/><path d="M500 150 C530 120 560 92 590 80 C584 112 566 150 520 170 Z" fill="url(#tl)"/><path d="M500 208 C530 236 560 262 590 276 C584 244 566 206 520 188 Z" fill="url(#tl)"/>
@@ -760,6 +762,8 @@ $('mic').onclick = async () => {
     status(e && e.name === 'NotAllowedError' && window.top === window ? 'הגישה למיקרופון נחסמה. אשרו אותה בהגדרות הדפדפן, או הקליטו קטע למטה.' : 'אין כאן גישה חיה למיקרופון — הקליטו קטע למטה, או פתחו את הדף כקובץ בדפדפן.');
     $('clip').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 };
+svg.onclick = () => { if (!T.listening && !T.clipMode) $('mic').click(); };
+svg.setAttribute('tabindex', '0'); svg.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && !T.listening && !T.clipMode) { e.preventDefault(); $('mic').click(); } };
 $('gain').oninput = e => { S.gain = +e.target.value; $('gainV').textContent = '×' + S.gain; save(); };
 
 // ------------------------------------------------------------ recorded clip
