@@ -19,7 +19,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Heebo,Arial,s
 .top{background:linear-gradient(180deg,var(--sea),var(--sea2));color:#eaf4fa;padding:14px max(4vw,14px) 6px}
 .top .row{max-width:880px;margin:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 h1{font:700 22px/1.1 Rubik,Heebo,sans-serif;margin:0;flex:1}
-.fig{position:relative;max-width:880px;margin:auto;aspect-ratio:600/330}
+.fig{position:relative;max-width:980px;margin:auto;aspect-ratio:780/330}
 .fig>svg{position:absolute;inset:0;width:100%;height:100%;direction:ltr}
 .fig>svg.go{cursor:pointer}
 .wrap{max-width:880px;margin:auto;padding:0 max(4vw,14px) 40px}
@@ -59,7 +59,7 @@ input[type=text]{min-height:44px;border-radius:12px;border:1.5px solid var(--rul
 .pick[hidden]{display:none}
 details{margin-top:8px}summary{cursor:pointer;min-height:32px}
 @media (prefers-reduced-motion:reduce){.meter i{transition:none}}
-@media(max-width:600px){h1{font-size:19px}.chip{min-height:38px;padding:0 11px}}
+@media(max-width:600px){.fig{aspect-ratio:494/262}h1{font-size:19px}.chip{min-height:38px;padding:0 11px}}
 </style>
 </head>
 <body>
@@ -69,7 +69,7 @@ details{margin-top:8px}summary{cursor:pointer;min-height:32px}
   <div class="meter" aria-hidden="true"><i id="lvl"></i></div>
   <button id="mic" class="mic">🎤 התחל להאזין</button>
  </div>
- <div class="fig"><svg id="whale" viewBox="0 0 600 330" role="img" aria-label="מסך הלוויתן"></svg></div>
+ <div class="fig"><svg id="whale" viewBox="0 0 780 330" role="img" aria-label="מסך הלוויתן"></svg></div>
  <div class="status" id="status" role="status"></div>
 </div>
 
@@ -549,6 +549,7 @@ function target() {
 
 // ------------------------------------------------------------ whale screen
 const svg = $('whale');
+const NARROW = matchMedia('(max-width: 600px)'); NARROW.addEventListener ? NARROW.addEventListener('change', () => screen()) : NARROW.addListener(() => screen());
 function diag(sh, x0, y0) {
   const w = 96, h = 88, sx = w / 5, fy = h / 4; const fr = sh.filter(f => f > 0); let base = 1;
   if (fr.length && Math.max(...fr) > 4) base = Math.min(...fr);
@@ -565,44 +566,46 @@ function screen() {
   if (S.mode === 'tune') {
     const t = T.tuner;
     const inTune = t && Math.abs(t.cents) < 5;
-    const nx = 262 + (t ? Math.max(-50, Math.min(50, t.cents)) : 0) * 2.2;
-    body = T_(262, 175, 58, '#fff', t ? t.note : '—', 'text-anchor="middle" font-weight="700" font-family="Rubik"') +
-      T_(262, 120, 13, '#9fb6c6', t ? 'מיתר ' + t.string + ' · ' + t.freq.toFixed(1) + ' Hz' : 'פרטו מיתר אחד', 'text-anchor="middle"') +
-      `<line x1="152" x2="372" y1="206" y2="206" stroke="#3b5a6f" stroke-width="2"/><line x1="262" x2="262" y1="196" y2="216" stroke="#9fb6c6" stroke-width="2"/>` +
+    const nx = 364 + (t ? Math.max(-50, Math.min(50, t.cents)) : 0) * 2.2;
+    body = T_(364, 175, 58, '#fff', t ? t.note : '—', 'text-anchor="middle" font-weight="700" font-family="Rubik"') +
+      T_(364, 120, 13, '#9fb6c6', t ? 'מיתר ' + t.string + ' · ' + t.freq.toFixed(1) + ' Hz' : 'פרטו מיתר אחד', 'text-anchor="middle"') +
+      `<line x1="254" x2="474" y1="206" y2="206" stroke="#3b5a6f" stroke-width="2"/><line x1="364" x2="364" y1="196" y2="216" stroke="#9fb6c6" stroke-width="2"/>` +
       (t ? `<circle cx="${nx}" cy="206" r="8" fill="${inTune ? '#1f9a60' : '#ff6b4a'}"/>` : '');
     T.fb = t ? { ok: inTune, t: inTune ? '✓ מכוון' : (t.cents < 0 ? 'נמוך ' : 'גבוה ') + Math.abs(t.cents).toFixed(0) + ' סנט — ' + (t.cents < 0 ? 'הדק' : 'שחרר') } : null;
   } else if (S.mode === 'free') {
     const h = T.heard;
     const sh = h ? E.fingering(h.chord) : null;
-    body = T_(150, 190, h && h.chord.name.length > 4 ? 40 : 54, '#fff', h ? h.chord.name : '?', 'font-weight="700" font-family="Rubik"') +
-      T_(152, 226, 13, '#9fb6c6', h ? 'אולי: ' + h.alternatives.map(a => a[0]).join(' · ') : 'נגנו אקורד') + (sh ? diag(sh, 268, 138) : '');
+    body = T_(172, 190, h && h.chord.name.length > 4 ? 40 : 54, '#fff', h ? h.chord.name : '?', 'font-weight="700" font-family="Rubik"') +
+      T_(174, 222, 13, '#9fb6c6', h ? 'אולי: ' + h.alternatives.map(a => a[0]).join(' · ') : 'נגנו אקורד') + (sh ? diag(sh, 446, 132) : '');
   } else {
     const t = target();
     const play = t.ch.transposed(-t.capo).name;
-    body = T_(150, 190, play.length > 4 ? 40 : 54, '#fff', play, 'font-weight="700" font-family="Rubik"') +
-      (t.capo ? T_(152, 212, 12.5, '#ffd36b', 'קפו ' + t.capo + ' · נשמע ' + t.ch.name) : '') +
-      (t.next ? T_(152, 232, 13, '#9fb6c6', '▶ ' + t.next) : T_(152, 232, 13, '#9fb6c6', 'רצף ' + T.streak + '/3')) +
-      T_(148, 114, 12, '#9fb6c6', S.mode === 'song' ? t.pos : (S.pracSel.length ? ((S.pracI % S.pracSel.length + S.pracSel.length) % S.pracSel.length + 1) + '/' + S.pracSel.length : '')) +
-      (t.sec ? T_(376, 114, 13, '#cfe2ee', t.sec, 'text-anchor="end"') : '') + diag(t.shape, 268, 138);
+    body = T_(172, 190, play.length > 4 ? 40 : 54, '#fff', play, 'font-weight="700" font-family="Rubik"') +
+      (t.capo ? T_(174, 210, 12.5, '#ffd36b', 'קפו ' + t.capo + ' · נשמע ' + t.ch.name) : '') +
+      (t.next ? T_(174, 222, 13, '#9fb6c6', '▶ ' + t.next) : T_(174, 222, 13, '#9fb6c6', 'רצף ' + T.streak + '/3')) +
+      T_(170, 116, 12, '#9fb6c6', S.mode === 'song' ? t.pos : (S.pracSel.length ? ((S.pracI % S.pracSel.length + S.pracSel.length) % S.pracSel.length + 1) + '/' + S.pracSel.length : '')) +
+      (t.sec ? T_(556, 116, 13, '#cfe2ee', t.sec, 'text-anchor="end"') : '') + diag(t.shape, 446, 132);
   }
   const fbt = T.fb == null ? (T.listening ? 'מקשיב…' : T.clipMode ? 'הקליטו קטע למטה' : '🎤 הקישו כאן כדי להתחיל להאזין') : T.fb.t;
   svg.classList.toggle('go', !T.listening && !T.clipMode);
+  svg.setAttribute('viewBox', NARROW.matches ? '118 50 494 262' : '0 0 780 330');
   svg.innerHTML = `<defs><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a98cb"/><stop offset="1" stop-color="#2a6a96"/></linearGradient><linearGradient id="tl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f75a4"/><stop offset="1" stop-color="#1e5379"/></linearGradient></defs>
- <ellipse cx="300" cy="318" rx="230" ry="9" fill="#06263c" opacity=".55"/>
- <path d="M458 150 L506 152 L506 206 L458 210 Z" fill="url(#tl)"/><path d="M500 150 C530 120 560 92 590 80 C584 112 566 150 520 170 Z" fill="url(#tl)"/><path d="M500 208 C530 236 560 262 590 276 C584 244 566 206 520 188 Z" fill="url(#tl)"/>
+ <ellipse cx="390" cy="318" rx="300" ry="9" fill="#06263c" opacity=".55"/>
+ <g transform="translate(170 0)"><path d="M458 150 L506 152 L506 206 L458 210 Z" fill="url(#tl)"/><path d="M500 150 C530 120 560 92 590 80 C584 112 566 150 520 170 Z" fill="url(#tl)"/><path d="M500 208 C530 236 560 262 590 276 C584 244 566 206 520 188 Z" fill="url(#tl)"/>
  <path d="M520 170 C548 168 572 172 590 178 M520 188 C548 190 572 186 590 180" stroke="#173f5c" stroke-width="5" fill="none" stroke-linecap="round"/>
- <circle cx="506" cy="179" r="11" fill="#173f5c"/><circle cx="506" cy="179" r="4.5" fill="#7fb3d6"/>
+ <circle cx="506" cy="179" r="11" fill="#173f5c"/><circle cx="506" cy="179" r="4.5" fill="#7fb3d6"/></g>
+ <g transform="translate(28.6 0) scale(1.3 1)">
  <path d="M38 196 C36 108 140 58 272 58 C380 58 448 104 470 168 C478 196 470 214 462 226 C436 280 360 308 262 308 C132 308 40 280 38 196 Z" fill="url(#bd)"/>
  <path d="M58 236 C110 292 214 306 296 304 C380 302 436 272 460 228 C420 262 360 280 280 282 C190 284 110 268 58 236 Z" fill="#d4e7f1"/>
- <path d="M70 140 C110 84 210 66 300 66" stroke="#8cc4e6" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>
- <circle cx="196" cy="58" r="6" fill="#173f5c"/>
- <path d="M188 46 C182 30 186 18 194 10 M204 46 C210 30 206 18 198 10" stroke="#9ccbe8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="${T.listening ? .95 : .35}"/>
- <circle cx="82" cy="182" r="9" fill="#0d2536"/><circle cx="85" cy="179" r="3" fill="#fff"/>
- <path d="M44 214 C70 226 92 226 108 218" stroke="#173f5c" stroke-width="3" fill="none" stroke-linecap="round"/>
- <rect x="128" y="90" width="268" height="176" rx="18" fill="#0b1f2d"/><rect x="136" y="98" width="252" height="160" rx="12" fill="#0f2a3d"/>
+ <path d="M70 140 C110 84 210 66 300 66" stroke="#8cc4e6" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+ <path d="M44 214 C70 226 92 226 108 218" stroke="#173f5c" stroke-width="3" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>
+ <circle cx="283" cy="58" r="6" fill="#173f5c"/>
+ <path d="M275 46 C269 30 273 18 281 10 M291 46 C297 30 293 18 285 10" stroke="#9ccbe8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="${T.listening ? .95 : .35}"/>
+ <circle cx="135" cy="182" r="9" fill="#0d2536"/><circle cx="138" cy="179" r="3" fill="#fff"/>
+ <rect x="146" y="88" width="436" height="186" rx="20" fill="#0b1f2d"/><rect x="154" y="96" width="420" height="170" rx="13" fill="#0f2a3d"/>
  ${body}
- <rect x="136" y="236" width="252" height="22" fill="${fbc}"/>
- <text x="262" y="252" font-size="13" font-weight="600" fill="#fff" font-family="Heebo" text-anchor="middle" direction="rtl">${esc(fbt)}</text>`;
+ <rect x="154" y="232" width="420" height="34" fill="${fbc}"/>
+ <text x="364" y="255" font-size="${fbt.length > 46 ? 14 : 16}" font-weight="600" fill="#fff" font-family="Heebo" text-anchor="middle" direction="rtl">${esc(fbt)}</text>`;
 }
 
 // ------------------------------------------------------------ panels
